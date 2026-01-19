@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BackgroundCanvas } from "../components/background3d/BackgroundCanvas";
+import { BackgroundEffectsProvider } from "../components/background3d/BackgroundEffectsProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,13 +25,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-<html lang="en">
-  <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-950 text-neutral-100`}>
-    <BackgroundCanvas />
-    <div className="relative z-10">
-      {children}
-    </div>
-  </body>
-</html>
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-950 text-neutral-100`}
+      >
+        <BackgroundEffectsProvider>
+          <BackgroundCanvas />
+          <div className="relative z-10">{children}</div>
+        </BackgroundEffectsProvider>
+      </body>
+    </html>
   );
 }

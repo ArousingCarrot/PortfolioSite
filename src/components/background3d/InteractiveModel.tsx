@@ -10,6 +10,11 @@ import {
   MouseDisplaceUniforms,
 } from "./createMouseDisplaceMaterial";
 import { useFitToViewport } from "./useFitToViewport";
+import { InferenceOverlay } from "./InferenceOverlay";
+import type {
+  InferencePulseMode,
+  InferencePulseState,
+} from "./BackgroundEffectsProvider";
 
 const baseMaterial = new THREE.MeshStandardMaterial({
   color: "#14141c",
@@ -30,6 +35,10 @@ type InteractiveModelProps = {
   touchOnly?: boolean;
   hasPointer?: boolean;
   debug?: boolean;
+
+  inferencePulse?: InferencePulseState | null;
+  inferenceMode?: InferencePulseMode;
+  inferenceBaseOpacity?: number;
 };
 
 function useOverlayMaterial(options: {
@@ -60,25 +69,78 @@ function GlbLayer({
   url,
   material,
   onReady,
+  onGeometryReady,
 }: {
   url: string;
   material: THREE.Material;
   onReady?: () => void;
+  onGeometryReady?: (geometry: THREE.BufferGeometry) => void;
 }) {
   const gltf = useGLTF(url);
   const scene = React.useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
   React.useEffect(() => {
+    let candidateMesh: THREE.Mesh | null = null;
+
+    // Reuse vectors to avoid per-traverse allocations
+    const candidateSize = new THREE.Vector3();
+    const meshSize = new THREE.Vector3();
+
     scene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material = material;
-        child.castShadow = false;
-        child.receiveShadow = false;
+      // Avoid relying on instanceof (can be brittle across mixed three builds),
+      // and avoid TS narrowing issues by using runtime flags.
+      const anyChild = child as unknown as {
+        isMesh?: boolean;
+        material?: unknown;
+        castShadow?: boolean;
+        receiveShadow?: boolean;
+        geometry?: unknown;
+      };
+
+      if (!anyChild.isMesh) return;
+
+      // Apply material overrides safely
+      (anyChild.material as THREE.Material) = material;
+      anyChild.castShadow = false;
+      anyChild.receiveShadow = false;
+
+      const mesh = child as unknown as THREE.Mesh;
+
+      if (!candidateMesh) {
+        candidateMesh = mesh;
+        return;
+      }
+
+      // Choose the largest mesh by bounds as representative geometry source
+      const candidateBox = new THREE.Box3().setFromObject(candidateMesh);
+      const childBox = new THREE.Box3().setFromObject(mesh);
+
+      const childLenSq = childBox.getSize(meshSize).lengthSq();
+      const candidateLenSq = candidateBox.getSize(candidateSize).lengthSq();
+
+      if (childLenSq > candidateLenSq) {
+        candidateMesh = mesh;
       }
     });
 
     onReady?.();
-  }, [scene, material, onReady]);
+
+    // Don’t let TS narrowing dictate this; assert and verify at runtime.
+    if (candidateMesh) {
+      const geom = (candidateMesh as THREE.Mesh).geometry as unknown;
+
+      // Ensure it’s a BufferGeometry before handing it to the overlay builder.
+      const isBufferGeometry =
+        typeof geom === "object" &&
+        geom !== null &&
+        // three sets isBufferGeometry on BufferGeometry instances
+        (geom as { isBufferGeometry?: boolean }).isBufferGeometry === true;
+
+      if (isBufferGeometry) {
+        onGeometryReady?.(geom as THREE.BufferGeometry);
+      }
+    }
+  }, [scene, material, onReady, onGeometryReady]);
 
   return <primitive object={scene} />;
 }
@@ -94,10 +156,16 @@ export function InteractiveModel({
   touchOnly = false,
   hasPointer = true,
   debug = false,
+  inferencePulse = null,
+  inferenceMode = "ai",
+  inferenceBaseOpacity = 0.05,
 }: InteractiveModelProps) {
-  const baseRef = React.useRef<THREE.Group>(null);
-  const overlayRef = React.useRef<THREE.Group>(null);
-  const debugRef = React.useRef<THREE.Mesh>(null);
+  const baseRef = React.useRef<THREE.Group | null>(null);
+  const overlayRef = React.useRef<THREE.Group | null>(null);
+  const debugRef = React.useRef<THREE.Mesh | null>(null);
+
+  const [sourceGeometry, setSourceGeometry] =
+    React.useState<THREE.BufferGeometry | null>(null);
 
   const { rootRef, contentRef, fitScale, refit } = useFitToViewport({
     marginY: 0.1,
@@ -153,6 +221,7 @@ export function InteractiveModel({
       tempPoint.copy(hits[0].point);
       overlayRef.current.worldToLocal(tempPoint);
       uniforms.uMouse.value.copy(tempPoint);
+
       if (debugRef.current) {
         debugRef.current.position.copy(tempPoint);
       }
@@ -172,32 +241,56 @@ export function InteractiveModel({
 
   const hasModel = Boolean(modelUrl);
 
-return (
-  <group ref={rootRef} scale={fitScale * modelScale}>
-    <group ref={contentRef}>
-      <group ref={baseRef}>
-        {hasModel && modelUrl ? (
-          <GlbLayer url={modelUrl} material={baseMaterial} onReady={refit} />
-        ) : (
-          <mesh geometry={geometryBase} material={baseMaterial} />
-        )}
-      </group>
+  React.useEffect(() => {
+    if (!hasModel) {
+      setSourceGeometry(geometryBase);
+      return;
+    }
+    // GLB mode: wait for GlbLayer to provide geometry
+    setSourceGeometry(null);
+  }, [hasModel, modelUrl, geometryBase]);
 
-      <group ref={overlayRef}>
-        {hasModel && modelUrl ? (
-          <GlbLayer url={modelUrl} material={overlayMaterial} />
-        ) : (
-          <mesh geometry={geometryOverlay} material={overlayMaterial} />
-        )}
-      </group>
+  return (
+    <group ref={rootRef} scale={fitScale * modelScale}>
+      <group ref={contentRef}>
+        <group ref={baseRef}>
+          {hasModel && modelUrl ? (
+            <GlbLayer
+              url={modelUrl}
+              material={baseMaterial}
+              onReady={refit}
+              onGeometryReady={setSourceGeometry}
+            />
+          ) : (
+            <mesh geometry={geometryBase} material={baseMaterial} />
+          )}
+        </group>
 
-      {debug ? (
-        <mesh ref={debugRef} visible={debug}>
-          <sphereGeometry args={[0.03, 12, 12]} />
-          <meshBasicMaterial color="#ff9f1a" />
-        </mesh>
-      ) : null}
+        <group ref={overlayRef}>
+          {hasModel && modelUrl ? (
+            <GlbLayer url={modelUrl} material={overlayMaterial} />
+          ) : (
+            <mesh geometry={geometryOverlay} material={overlayMaterial} />
+          )}
+        </group>
+
+        {sourceGeometry ? (
+          <InferenceOverlay
+            sourceGeometry={sourceGeometry}
+            pulse={inferencePulse}
+            reducedMotion={reducedMotion}
+            baseOpacity={inferenceBaseOpacity}
+            mode={inferenceMode}
+          />
+        ) : null}
+
+        {debug ? (
+          <mesh ref={debugRef} visible={debug}>
+            <sphereGeometry args={[0.03, 12, 12]} />
+            <meshBasicMaterial color="#ff9f1a" />
+          </mesh>
+        ) : null}
+      </group>
     </group>
-  </group>
-);
+  );
 }
