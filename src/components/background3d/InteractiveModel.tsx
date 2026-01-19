@@ -106,7 +106,7 @@ function GlbLayer({
   );
 
 React.useEffect(() => {
-  let candidate: MeshWithGeom | null = null;
+  const candidateBox: { current: MeshWithGeom | null } = { current: null };
   let bestScore = -Infinity;
 
   const box = new THREE.Box3();
@@ -127,7 +127,7 @@ React.useEffect(() => {
 
     if (score > bestScore) {
       bestScore = score;
-      candidate = mesh;
+      candidateBox.current = mesh;
     }
   });
 
@@ -135,8 +135,10 @@ React.useEffect(() => {
 
   scene.updateWorldMatrix(true, true);
 
+  const candidate = candidateBox.current;
   if (!candidate) return;
 
+  // scene.updateWorldMatrix(true, true) already updated children, but keeping this is fine:
   candidate.updateWorldMatrix(true, false);
   onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
 }, [scene, material, onReady, onGeometryReady]);
