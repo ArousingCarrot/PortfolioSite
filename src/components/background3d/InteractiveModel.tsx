@@ -9,6 +9,7 @@ import {
   FAR_POINT,
   MouseDisplaceUniforms,
 } from "./createMouseDisplaceMaterial";
+import { useFitToViewport } from "./useFitToViewport";
 
 const baseMaterial = new THREE.MeshStandardMaterial({
   color: "#14141c",
@@ -23,6 +24,7 @@ type InteractiveModelProps = {
   strength?: number;
   opacity?: number;
   idleStrength?: number;
+  modelScale?: number;
   modelUrl?: string | null;
   reducedMotion?: boolean;
   touchOnly?: boolean;
@@ -57,9 +59,11 @@ function useOverlayMaterial(options: {
 function GlbLayer({
   url,
   material,
+  onReady,
 }: {
   url: string;
   material: THREE.Material;
+  onReady?: () => void;
 }) {
   const gltf = useGLTF(url);
   const scene = React.useMemo(() => gltf.scene.clone(true), [gltf.scene]);
@@ -72,7 +76,9 @@ function GlbLayer({
         child.receiveShadow = false;
       }
     });
-  }, [scene, material]);
+
+    onReady?.();
+  }, [scene, material, onReady]);
 
   return <primitive object={scene} />;
 }
@@ -82,6 +88,7 @@ export function InteractiveModel({
   strength = 0.4,
   opacity = 0.45,
   idleStrength = 0.02,
+  modelScale = 1,
   modelUrl,
   reducedMotion = false,
   touchOnly = false,
@@ -91,6 +98,12 @@ export function InteractiveModel({
   const baseRef = React.useRef<THREE.Group>(null);
   const overlayRef = React.useRef<THREE.Group>(null);
   const debugRef = React.useRef<THREE.Mesh>(null);
+
+  const { rootRef, contentRef, fitScale, refit } = useFitToViewport({
+    marginY: 0.1,
+    marginX: 0.1,
+    fit: "both",
+  });
 
   const overlayOptions = React.useMemo(
     () => ({
@@ -159,11 +172,12 @@ export function InteractiveModel({
 
   const hasModel = Boolean(modelUrl);
 
-  return (
-    <group scale={1.2}>
+return (
+  <group ref={rootRef} scale={fitScale * modelScale}>
+    <group ref={contentRef}>
       <group ref={baseRef}>
         {hasModel && modelUrl ? (
-          <GlbLayer url={modelUrl} material={baseMaterial} />
+          <GlbLayer url={modelUrl} material={baseMaterial} onReady={refit} />
         ) : (
           <mesh geometry={geometryBase} material={baseMaterial} />
         )}
@@ -184,5 +198,6 @@ export function InteractiveModel({
         </mesh>
       ) : null}
     </group>
-  );
+  </group>
+);
 }

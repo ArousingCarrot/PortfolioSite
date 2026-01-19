@@ -89,6 +89,7 @@ export function BackgroundCanvas() {
 
         <InteractiveModel
           modelUrl={modelUrl}
+          modelScale={1}
           reducedMotion={reducedMotion}
           touchOnly={touchOnly}
           hasPointer={hasPointer}
