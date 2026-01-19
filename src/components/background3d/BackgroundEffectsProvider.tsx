@@ -43,21 +43,46 @@ export function BackgroundEffectsProvider({
     process.env.NODE_ENV !== "production"
   );
 
+  const clearTimerRef = React.useRef<number | null>(null);
+
   const triggerInferencePulse = React.useCallback(
     (options: InferencePulseOptions = {}) => {
       const { intensity, durationMs, mode } = {
         ...DEFAULT_PULSE,
         ...options,
       };
+
+      // Clear any scheduled reset so rapid triggers still feel responsive.
+      if (clearTimerRef.current !== null) {
+        window.clearTimeout(clearTimerRef.current);
+        clearTimerRef.current = null;
+      }
+
       setPulse({
         startTime: performance.now(),
         durationMs,
         intensity,
         mode,
       });
+
+      // Always clear pulse state after it ends. This is important for
+      // reduced-motion + frameloop="demand" where we may only render
+      // on state changes.
+      clearTimerRef.current = window.setTimeout(() => {
+        setPulse(null);
+        clearTimerRef.current = null;
+      }, durationMs + 34);
     },
     []
   );
+
+  React.useEffect(() => {
+    return () => {
+      if (clearTimerRef.current !== null) {
+        window.clearTimeout(clearTimerRef.current);
+      }
+    };
+  }, []);
 
   const value = React.useMemo(
     () => ({
@@ -85,7 +110,3 @@ export function useBackgroundEffects() {
   }
   return context;
 }
-
-// Usage example:
-// const { triggerInferencePulse } = useBackgroundEffects();
-// onMouseEnter={() => triggerInferencePulse({ intensity: 0.9 })}

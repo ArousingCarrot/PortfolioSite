@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import * as THREE from "three";
+import type { BufferGeometry, Material, Matrix4, Mesh, Object3D } from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import {
@@ -15,6 +16,13 @@ import type {
   InferencePulseMode,
   InferencePulseState,
 } from "./BackgroundEffectsProvider";
+// Minimal GLTF type to avoid depending on three/examples typings
+type GLTF = {
+  scene: THREE.Group;
+  scenes: THREE.Group[];
+  animations: THREE.AnimationClip[];
+  parser?: any;
+};
 
 const baseMaterial = new THREE.MeshStandardMaterial({
   color: "#14141c",
@@ -23,6 +31,13 @@ const baseMaterial = new THREE.MeshStandardMaterial({
   emissive: "#050508",
   emissiveIntensity: 0.6,
 });
+
+function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix4) {
+  // Returns a matrix that transforms from source's world space into target's local space:
+  // targetLocal = inverse(targetWorld) * sourceWorld
+  const invTarget = new THREE.Matrix4().copy(targetWorld).invert();
+  return new THREE.Matrix4().multiplyMatrices(invTarget, sourceWorld);
+}
 
 type InteractiveModelProps = {
   radius?: number;
@@ -56,13 +71,20 @@ function useOverlayMaterial(options: {
     material.wireframe = true;
     material.transparent = true;
     material.depthWrite = false;
-
-    return () => {
-      material.dispose();
-    };
+    return () => material.dispose();
   }, [material]);
 
   return material;
+}
+
+type MeshWithGeom = Mesh<BufferGeometry, Material | Material[]>;
+
+function isMeshWithBufferGeometry(obj: Object3D): obj is MeshWithGeom {
+  const anyObj = obj as unknown as {
+    isMesh?: boolean;
+    geometry?: { isBufferGeometry?: boolean };
+  };
+  return anyObj.isMesh === true && anyObj.geometry?.isBufferGeometry === true;
 }
 
 function GlbLayer({
@@ -72,75 +94,52 @@ function GlbLayer({
   onGeometryReady,
 }: {
   url: string;
-  material: THREE.Material;
+  material: Material;
   onReady?: () => void;
-  onGeometryReady?: (geometry: THREE.BufferGeometry) => void;
+  onGeometryReady?: (geometry: BufferGeometry, meshWorld: Matrix4) => void;
 }) {
-  const gltf = useGLTF(url);
-  const scene = React.useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  const gltf = useGLTF(url) as unknown as GLTF;
 
-  React.useEffect(() => {
-    let candidateMesh: THREE.Mesh | null = null;
+  const scene = React.useMemo<THREE.Group>(
+    () => gltf.scene.clone(true) as THREE.Group,
+    [gltf.scene]
+  );
 
-    // Reuse vectors to avoid per-traverse allocations
-    const candidateSize = new THREE.Vector3();
-    const meshSize = new THREE.Vector3();
+React.useEffect(() => {
+  let candidate: MeshWithGeom | null = null;
+  let bestScore = -Infinity;
 
-    scene.traverse((child) => {
-      // Avoid relying on instanceof (can be brittle across mixed three builds),
-      // and avoid TS narrowing issues by using runtime flags.
-      const anyChild = child as unknown as {
-        isMesh?: boolean;
-        material?: unknown;
-        castShadow?: boolean;
-        receiveShadow?: boolean;
-        geometry?: unknown;
-      };
+  const box = new THREE.Box3();
+  const size = new THREE.Vector3();
 
-      if (!anyChild.isMesh) return;
+  scene.traverse((obj) => {
+    if (!isMeshWithBufferGeometry(obj)) return;
 
-      // Apply material overrides safely
-      (anyChild.material as THREE.Material) = material;
-      anyChild.castShadow = false;
-      anyChild.receiveShadow = false;
+    const mesh = obj; // MeshWithGeom
+    mesh.material = material;
 
-      const mesh = child as unknown as THREE.Mesh;
+    const geom = mesh.geometry;
+    if (!geom.boundingBox) geom.computeBoundingBox();
+    if (!geom.boundingBox) return;
 
-      if (!candidateMesh) {
-        candidateMesh = mesh;
-        return;
-      }
+    box.copy(geom.boundingBox);
+    const score = box.getSize(size).lengthSq();
 
-      // Choose the largest mesh by bounds as representative geometry source
-      const candidateBox = new THREE.Box3().setFromObject(candidateMesh);
-      const childBox = new THREE.Box3().setFromObject(mesh);
-
-      const childLenSq = childBox.getSize(meshSize).lengthSq();
-      const candidateLenSq = candidateBox.getSize(candidateSize).lengthSq();
-
-      if (childLenSq > candidateLenSq) {
-        candidateMesh = mesh;
-      }
-    });
-
-    onReady?.();
-
-    // Don’t let TS narrowing dictate this; assert and verify at runtime.
-    if (candidateMesh) {
-      const geom = (candidateMesh as THREE.Mesh).geometry as unknown;
-
-      // Ensure it’s a BufferGeometry before handing it to the overlay builder.
-      const isBufferGeometry =
-        typeof geom === "object" &&
-        geom !== null &&
-        // three sets isBufferGeometry on BufferGeometry instances
-        (geom as { isBufferGeometry?: boolean }).isBufferGeometry === true;
-
-      if (isBufferGeometry) {
-        onGeometryReady?.(geom as THREE.BufferGeometry);
-      }
+    if (score > bestScore) {
+      bestScore = score;
+      candidate = mesh;
     }
-  }, [scene, material, onReady, onGeometryReady]);
+  });
+
+  onReady?.();
+
+  scene.updateWorldMatrix(true, true);
+
+  if (!candidate) return;
+
+  candidate.updateWorldMatrix(true, false);
+  onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
+}, [scene, material, onReady, onGeometryReady]);
 
   return <primitive object={scene} />;
 }
@@ -164,6 +163,7 @@ export function InteractiveModel({
   const overlayRef = React.useRef<THREE.Group | null>(null);
   const debugRef = React.useRef<THREE.Mesh | null>(null);
 
+  const ownedSourceGeometryRef = React.useRef<THREE.BufferGeometry | null>(null);
   const [sourceGeometry, setSourceGeometry] =
     React.useState<THREE.BufferGeometry | null>(null);
 
@@ -222,9 +222,7 @@ export function InteractiveModel({
       overlayRef.current.worldToLocal(tempPoint);
       uniforms.uMouse.value.copy(tempPoint);
 
-      if (debugRef.current) {
-        debugRef.current.position.copy(tempPoint);
-      }
+      if (debugRef.current) debugRef.current.position.copy(tempPoint);
     } else {
       uniforms.uMouse.value.copy(FAR_POINT);
     }
@@ -241,14 +239,55 @@ export function InteractiveModel({
 
   const hasModel = Boolean(modelUrl);
 
+  const handleGlbGeometry = React.useCallback(
+    (geometry: THREE.BufferGeometry, meshWorld: THREE.Matrix4) => {
+      // Dispose previous owned clone
+      if (ownedSourceGeometryRef.current) {
+        ownedSourceGeometryRef.current.dispose();
+        ownedSourceGeometryRef.current = null;
+      }
+
+      const content = contentRef.current;
+      const cloned = geometry.clone();
+
+      if (content) {
+        // Bake the mesh's world transform into content-local space
+        content.updateWorldMatrix(true, false);
+        const rel = computeRelativeTo(meshWorld, content.matrixWorld);
+        cloned.applyMatrix4(rel);
+      }
+
+      cloned.computeBoundingBox();
+      cloned.computeBoundingSphere();
+
+      ownedSourceGeometryRef.current = cloned;
+      setSourceGeometry(cloned);
+    },
+    [contentRef]
+  );
+
   React.useEffect(() => {
     if (!hasModel) {
+      // fallback mode (we do not own geometryBase)
+      if (ownedSourceGeometryRef.current) {
+        ownedSourceGeometryRef.current.dispose();
+        ownedSourceGeometryRef.current = null;
+      }
       setSourceGeometry(geometryBase);
       return;
     }
-    // GLB mode: wait for GlbLayer to provide geometry
+
     setSourceGeometry(null);
   }, [hasModel, modelUrl, geometryBase]);
+
+  React.useEffect(() => {
+    return () => {
+      if (ownedSourceGeometryRef.current) {
+        ownedSourceGeometryRef.current.dispose();
+        ownedSourceGeometryRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <group ref={rootRef} scale={fitScale * modelScale}>
@@ -259,7 +298,7 @@ export function InteractiveModel({
               url={modelUrl}
               material={baseMaterial}
               onReady={refit}
-              onGeometryReady={setSourceGeometry}
+              onGeometryReady={handleGlbGeometry}
             />
           ) : (
             <mesh geometry={geometryBase} material={baseMaterial} />
@@ -280,7 +319,8 @@ export function InteractiveModel({
             pulse={inferencePulse}
             reducedMotion={reducedMotion}
             baseOpacity={inferenceBaseOpacity}
-            mode={inferenceMode}
+            mode={inferencePulse?.mode ?? inferenceMode}
+            debug={debug}
           />
         ) : null}
 

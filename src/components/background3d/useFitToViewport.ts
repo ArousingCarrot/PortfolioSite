@@ -16,10 +16,11 @@ export type UseFitToViewportOptions = {
 export function useFitToViewport(options: UseFitToViewportOptions = {}) {
   const { marginY = 0.1, marginX = 0.1, fit = "both" } = options;
 
-  const rootRef = React.useRef<THREE.Group>(null);
-  const contentRef = React.useRef<THREE.Group>(null);
+  // NOTE: strict TS requires refs to include null in the type.
+  const rootRef = React.useRef<THREE.Group | null>(null);
+  const contentRef = React.useRef<THREE.Group | null>(null);
 
-  const { camera, size } = useThree();
+  const { camera, size, invalidate } = useThree();
   const [fitScale, setFitScale] = React.useState(1);
 
   const refit = React.useCallback(() => {
@@ -45,7 +46,12 @@ export function useFitToViewport(options: UseFitToViewportOptions = {}) {
     box.getSize(boxSize);
     box.getCenter(center);
 
-    if (!isFinite(boxSize.x) || !isFinite(boxSize.y) || boxSize.x <= 0 || boxSize.y <= 0) {
+    if (
+      !isFinite(boxSize.x) ||
+      !isFinite(boxSize.y) ||
+      boxSize.x <= 0 ||
+      boxSize.y <= 0
+    ) {
       root.scale.copy(prevRootScale);
       root.updateWorldMatrix(true, true);
       return;
@@ -79,8 +85,12 @@ export function useFitToViewport(options: UseFitToViewportOptions = {}) {
     root.scale.copy(prevRootScale);
     root.updateWorldMatrix(true, true);
 
-    if (isFinite(nextScale) && nextScale > 0) setFitScale(nextScale);
-  }, [camera, marginX, marginY, fit, size.width, size.height]);
+    if (isFinite(nextScale) && nextScale > 0) {
+      setFitScale(nextScale);
+      // Useful when Canvas is running in frameloop="demand".
+      invalidate();
+    }
+  }, [camera, invalidate, marginX, marginY, fit, size.width, size.height]);
 
   // Refit on viewport resize / camera changes
   React.useLayoutEffect(() => {
