@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 // --- The whole hero section with overlayed UI ---
 export default function PortfolioHero() {
   return (
-    <div className="relative min-h-screen bg-neutral-950 text-neutral-100 overflow-hidden">
+    <div className="relative min-h-screen bg-transparent text-neutral-100 overflow-hidden">
       {/* subtle vignette/gradient overlay for contrast */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
 

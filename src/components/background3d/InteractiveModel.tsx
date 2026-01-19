@@ -11,9 +11,11 @@ import {
 } from "./createMouseDisplaceMaterial";
 
 const baseMaterial = new THREE.MeshStandardMaterial({
-  color: "#0b0b0d",
+  color: "#14141c",
   metalness: 0.15,
   roughness: 0.85,
+  emissive: "#050508",
+  emissiveIntensity: 0.6,
 });
 
 type InteractiveModelProps = {

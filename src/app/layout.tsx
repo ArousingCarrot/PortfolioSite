@@ -24,13 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <BackgroundCanvas />
-        {children}
-      </body>
-    </html>
+<html lang="en">
+  <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-950 text-neutral-100`}>
+    <BackgroundCanvas />
+    <div className="relative z-10">
+      {children}
+    </div>
+  </body>
+</html>
   );
 }

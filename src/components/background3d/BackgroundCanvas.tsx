@@ -75,7 +75,7 @@ export function BackgroundCanvas() {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10">
+    <div className="pointer-events-none fixed inset-0 -z-0">
       <Canvas
         camera={{ position: [0, 0, 3.6], fov: 55 }}
         dpr={[1, 2]}
@@ -95,8 +95,8 @@ export function BackgroundCanvas() {
           debug={debug}
           radius={0.7}
           strength={0.4}
-          opacity={0.5}
-          idleStrength={0.02}
+          opacity={0.8}
+          idleStrength={0.03}
         />
       </Canvas>
     </div>
