@@ -114,17 +114,23 @@ export function BackgroundCanvas() {
     };
   }, [idleEnabled, reducedMotion, triggerInferencePulse]);
 
-  return (
-    <div className="pointer-events-none fixed inset-0 z-10" aria-hidden="true">
-      <div
+return (
+  <div className="pointer-events-none fixed inset-0 z-10" aria-hidden="true">
+    <div
+      className="absolute inset-0"
+      style={{
+        opacity: canvasReady ? 1 : 0,
+        transition: "opacity 140ms ease-out",
+      }}
+    >
+      <Canvas
         style={{
-          opacity: canvasReady ? 1 : 0,
-          transition: "opacity 140ms ease-out",
+          background: "transparent",
+          width: "100%",
+          height: "100%",
+          display: "block",
         }}
-      >
-        <Canvas
-          style={{ background: "transparent" }}
-          camera={{ position: [0, 0, 3.6], fov: 55 }}
+        camera={{ position: [0, 0, 3.6], fov: 55 }}
           dpr={[1, 2]}
           eventSource={eventSource ?? undefined}
           eventPrefix="client"
