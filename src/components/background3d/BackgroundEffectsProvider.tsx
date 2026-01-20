@@ -39,9 +39,7 @@ export function BackgroundEffectsProvider({
   children: React.ReactNode;
 }) {
   const [pulse, setPulse] = React.useState<InferencePulseState | null>(null);
-  const [idleEnabled, setIdleEnabled] = React.useState(
-    process.env.NODE_ENV !== "production"
-  );
+  const [idleEnabled, setIdleEnabled] = React.useState(false);
 
   const clearTimerRef = React.useRef<number | null>(null);
 
