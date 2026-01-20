@@ -63,7 +63,9 @@ export default function RootLayout({
           {/* Canvas sits above the dot grid */}
           <BackgroundCanvas />
           {/* Foreground content */}
-          <div className="relative z-20">{children}</div>
+<div className="relative z-20" data-ui>
+  {children}
+</div>
         </BackgroundEffectsProvider>
       </body>
     </html>
