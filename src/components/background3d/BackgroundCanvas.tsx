@@ -36,10 +36,14 @@ function useTouchOnly() {
 }
 
 export function BackgroundCanvas() {
-  const { pulse, triggerInferencePulse, idleEnabled } = useBackgroundEffects();
+  const {
+    pulse,
+    triggerInferencePulse,
+    idleEnabled,
+    setInferenceIdleEnabled,
+  } = useBackgroundEffects();
 
   const [eventSource, setEventSource] = React.useState<HTMLElement | null>(null);
-  const [modelUrl, setModelUrl] = React.useState<string | null>(null);
   const [debug, setDebug] = React.useState(false);
   const [hasPointer, setHasPointer] = React.useState(false);
 
@@ -59,15 +63,31 @@ export function BackgroundCanvas() {
     };
   }, []);
 
+  // Avoid a preflight HEAD gate here:
+  // - Some hosts/CDNs treat HEAD differently than GET.
+  // - It introduces a brief "null model" window where the fallback mesh flashes.
+  // Let GLTF loading handle readiness via suspense.
+  const modelUrl = MODEL_PATH;
+
+  // On touch devices, enable a subtle periodic pulse so the background doesn't feel "static".
+  // (Desktop can remain hover-reactive-only.)
   React.useEffect(() => {
-    const controller = new AbortController();
-    fetch(MODEL_PATH, { method: "HEAD", signal: controller.signal })
-      .then((r) => {
-        if (r.ok) setModelUrl(MODEL_PATH);
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, []);
+    if (reducedMotion) {
+      setInferenceIdleEnabled(false);
+      return;
+    }
+    setInferenceIdleEnabled(touchOnly);
+  }, [touchOnly, reducedMotion, setInferenceIdleEnabled]);
+
+  // Touch: fire one quick pulse shortly after mount for immediate motion discoverability.
+  React.useEffect(() => {
+    if (reducedMotion) return;
+    if (!touchOnly) return;
+    const t = window.setTimeout(() => {
+      triggerInferencePulse({ intensity: 0.62, durationMs: 850, mode: "neutral" });
+    }, 650);
+    return () => window.clearTimeout(t);
+  }, [touchOnly, reducedMotion, triggerInferencePulse]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -83,13 +103,7 @@ export function BackgroundCanvas() {
 
       const el = e.target as HTMLElement | null;
       const tag = el?.tagName?.toLowerCase();
-      if (
-        tag === "input" ||
-        tag === "textarea" ||
-        el?.isContentEditable
-      ) {
-        return;
-      }
+      if (tag === "input" || tag === "textarea" || el?.isContentEditable) return;
 
       triggerInferencePulse({
         intensity: debug ? 1 : 0.9,
@@ -106,7 +120,11 @@ export function BackgroundCanvas() {
   React.useEffect(() => {
     if (!isDev) return;
     const t = window.setTimeout(() => {
-      triggerInferencePulse({ intensity: debug ? 1 : 0.85, durationMs: 900, mode: "ai" });
+      triggerInferencePulse({
+        intensity: debug ? 1 : 0.85,
+        durationMs: 900,
+        mode: "ai",
+      });
     }, 550);
     return () => window.clearTimeout(t);
   }, [isDev, triggerInferencePulse, debug]);

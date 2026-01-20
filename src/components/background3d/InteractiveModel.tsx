@@ -16,7 +16,7 @@ import type {
   InferencePulseMode,
   InferencePulseState,
 } from "./BackgroundEffectsProvider";
-// Minimal GLTF type to avoid depending on three/examples typings
+
 type GLTF = {
   scene: THREE.Group;
   scenes: THREE.Group[];
@@ -33,8 +33,6 @@ const baseMaterial = new THREE.MeshStandardMaterial({
 });
 
 function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix4) {
-  // Returns a matrix that transforms from source's world space into target's local space:
-  // targetLocal = inverse(targetWorld) * sourceWorld
   const invTarget = new THREE.Matrix4().copy(targetWorld).invert();
   return new THREE.Matrix4().multiplyMatrices(invTarget, sourceWorld);
 }
@@ -105,43 +103,42 @@ function GlbLayer({
     [gltf.scene]
   );
 
-React.useEffect(() => {
-  const candidateBox: { current: MeshWithGeom | null } = { current: null };
-  let bestScore = -Infinity;
+  React.useEffect(() => {
+    const candidateBox: { current: MeshWithGeom | null } = { current: null };
+    let bestScore = -Infinity;
 
-  const box = new THREE.Box3();
-  const size = new THREE.Vector3();
+    const box = new THREE.Box3();
+    const size = new THREE.Vector3();
 
-  scene.traverse((obj) => {
-    if (!isMeshWithBufferGeometry(obj)) return;
+    scene.traverse((obj) => {
+      if (!isMeshWithBufferGeometry(obj)) return;
 
-    const mesh = obj; // MeshWithGeom
-    mesh.material = material;
+      const mesh = obj;
+      mesh.material = material;
 
-    const geom = mesh.geometry;
-    if (!geom.boundingBox) geom.computeBoundingBox();
-    if (!geom.boundingBox) return;
+      const geom = mesh.geometry;
+      if (!geom.boundingBox) geom.computeBoundingBox();
+      if (!geom.boundingBox) return;
 
-    box.copy(geom.boundingBox);
-    const score = box.getSize(size).lengthSq();
+      box.copy(geom.boundingBox);
+      const score = box.getSize(size).lengthSq();
 
-    if (score > bestScore) {
-      bestScore = score;
-      candidateBox.current = mesh;
-    }
-  });
+      if (score > bestScore) {
+        bestScore = score;
+        candidateBox.current = mesh;
+      }
+    });
 
-  onReady?.();
+    onReady?.();
 
-  scene.updateWorldMatrix(true, true);
+    scene.updateWorldMatrix(true, true);
 
-  const candidate = candidateBox.current;
-  if (!candidate) return;
+    const candidate = candidateBox.current;
+    if (!candidate) return;
 
-  // scene.updateWorldMatrix(true, true) already updated children, but keeping this is fine:
-  candidate.updateWorldMatrix(true, false);
-  onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
-}, [scene, material, onReady, onGeometryReady]);
+    candidate.updateWorldMatrix(true, false);
+    onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
+  }, [scene, material, onReady, onGeometryReady]);
 
   return <primitive object={scene} />;
 }
@@ -198,16 +195,25 @@ export function InteractiveModel({
 
   useFrame((_, delta) => {
     const uniforms = overlayMaterial.uniforms as MouseDisplaceUniforms;
-    const disableMotion = reducedMotion || touchOnly;
 
-    if (disableMotion) {
+    if (reducedMotion) {
       uniforms.uStrength.value = 0;
       uniforms.uIdleStrength.value = 0;
       uniforms.uMouse.value.copy(FAR_POINT);
       return;
     }
 
+    // Always tick time so the shader can animate on mobile too.
     uniforms.uTime.value += delta;
+
+    // Touch devices: keep idle animation, but disable mouse-driven deformation.
+    if (touchOnly) {
+      uniforms.uStrength.value = 0;
+      uniforms.uIdleStrength.value = idleStrength;
+      uniforms.uMouse.value.copy(FAR_POINT);
+      return;
+    }
+
     uniforms.uStrength.value = strength;
     uniforms.uIdleStrength.value = idleStrength;
 
@@ -230,20 +236,10 @@ export function InteractiveModel({
     }
   });
 
-  const geometryBase = React.useMemo(
-    () => new THREE.IcosahedronGeometry(1, 2),
-    []
-  );
-  const geometryOverlay = React.useMemo(
-    () => new THREE.IcosahedronGeometry(1.01, 4),
-    []
-  );
-
   const hasModel = Boolean(modelUrl);
 
   const handleGlbGeometry = React.useCallback(
     (geometry: THREE.BufferGeometry, meshWorld: THREE.Matrix4) => {
-      // Dispose previous owned clone
       if (ownedSourceGeometryRef.current) {
         ownedSourceGeometryRef.current.dispose();
         ownedSourceGeometryRef.current = null;
@@ -253,7 +249,6 @@ export function InteractiveModel({
       const cloned = geometry.clone();
 
       if (content) {
-        // Bake the mesh's world transform into content-local space
         content.updateWorldMatrix(true, false);
         const rel = computeRelativeTo(meshWorld, content.matrixWorld);
         cloned.applyMatrix4(rel);
@@ -270,17 +265,16 @@ export function InteractiveModel({
 
   React.useEffect(() => {
     if (!hasModel) {
-      // fallback mode (we do not own geometryBase)
       if (ownedSourceGeometryRef.current) {
         ownedSourceGeometryRef.current.dispose();
         ownedSourceGeometryRef.current = null;
       }
-      setSourceGeometry(geometryBase);
+      setSourceGeometry(null);
       return;
     }
 
     setSourceGeometry(null);
-  }, [hasModel, modelUrl, geometryBase]);
+  }, [hasModel, modelUrl]);
 
   React.useEffect(() => {
     return () => {
@@ -296,23 +290,23 @@ export function InteractiveModel({
       <group ref={contentRef}>
         <group ref={baseRef}>
           {hasModel && modelUrl ? (
-            <GlbLayer
-              url={modelUrl}
-              material={baseMaterial}
-              onReady={refit}
-              onGeometryReady={handleGlbGeometry}
-            />
-          ) : (
-            <mesh geometry={geometryBase} material={baseMaterial} />
-          )}
+            <React.Suspense fallback={null}>
+              <GlbLayer
+                url={modelUrl}
+                material={baseMaterial}
+                onReady={refit}
+                onGeometryReady={handleGlbGeometry}
+              />
+            </React.Suspense>
+          ) : null}
         </group>
 
         <group ref={overlayRef}>
           {hasModel && modelUrl ? (
-            <GlbLayer url={modelUrl} material={overlayMaterial} />
-          ) : (
-            <mesh geometry={geometryOverlay} material={overlayMaterial} />
-          )}
+            <React.Suspense fallback={null}>
+              <GlbLayer url={modelUrl} material={overlayMaterial} />
+            </React.Suspense>
+          ) : null}
         </group>
 
         {sourceGeometry ? (
