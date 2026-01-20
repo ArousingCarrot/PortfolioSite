@@ -24,14 +24,6 @@ type GLTF = {
   parser?: any;
 };
 
-const baseMaterial = new THREE.MeshStandardMaterial({
-  color: "#14141c",
-  metalness: 0.15,
-  roughness: 0.85,
-  emissive: "#050508",
-  emissiveIntensity: 0.6,
-});
-
 function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix4) {
   const invTarget = new THREE.Matrix4().copy(targetWorld).invert();
   return new THREE.Matrix4().multiplyMatrices(invTarget, sourceWorld);
@@ -87,12 +79,12 @@ function isMeshWithBufferGeometry(obj: Object3D): obj is MeshWithGeom {
 
 function GlbLayer({
   url,
-  material,
+  overrideMaterial,
   onReady,
   onGeometryReady,
 }: {
   url: string;
-  material: Material;
+  overrideMaterial?: Material;
   onReady?: () => void;
   onGeometryReady?: (geometry: BufferGeometry, meshWorld: Matrix4) => void;
 }) {
@@ -114,7 +106,11 @@ function GlbLayer({
       if (!isMeshWithBufferGeometry(obj)) return;
 
       const mesh = obj;
-      mesh.material = material;
+
+      // Only override materials if explicitly provided (overlay layer).
+      if (overrideMaterial) {
+        mesh.material = overrideMaterial;
+      }
 
       const geom = mesh.geometry;
       if (!geom.boundingBox) geom.computeBoundingBox();
@@ -122,7 +118,6 @@ function GlbLayer({
 
       box.copy(geom.boundingBox);
       const score = box.getSize(size).lengthSq();
-
       if (score > bestScore) {
         bestScore = score;
         candidateBox.current = mesh;
@@ -138,7 +133,7 @@ function GlbLayer({
 
     candidate.updateWorldMatrix(true, false);
     onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
-  }, [scene, material, onReady, onGeometryReady]);
+  }, [scene, overrideMaterial, onReady, onGeometryReady]);
 
   return <primitive object={scene} />;
 }
@@ -173,12 +168,7 @@ export function InteractiveModel({
   });
 
   const overlayOptions = React.useMemo(
-    () => ({
-      radius,
-      strength,
-      opacity,
-      idleStrength,
-    }),
+    () => ({ radius, strength, opacity, idleStrength }),
     [radius, strength, opacity, idleStrength]
   );
 
@@ -203,10 +193,8 @@ export function InteractiveModel({
       return;
     }
 
-    // Always tick time so the shader can animate on mobile too.
     uniforms.uTime.value += delta;
 
-    // Touch devices: keep idle animation, but disable mouse-driven deformation.
     if (touchOnly) {
       uniforms.uStrength.value = 0;
       uniforms.uIdleStrength.value = idleStrength;
@@ -272,7 +260,6 @@ export function InteractiveModel({
       setSourceGeometry(null);
       return;
     }
-
     setSourceGeometry(null);
   }, [hasModel, modelUrl]);
 
@@ -291,12 +278,8 @@ export function InteractiveModel({
         <group ref={baseRef}>
           {hasModel && modelUrl ? (
             <React.Suspense fallback={null}>
-              <GlbLayer
-                url={modelUrl}
-                material={baseMaterial}
-                onReady={refit}
-                onGeometryReady={handleGlbGeometry}
-              />
+              {/* Base layer: keep GLB materials so lighting reads correctly */}
+              <GlbLayer url={modelUrl} onReady={refit} onGeometryReady={handleGlbGeometry} />
             </React.Suspense>
           ) : null}
         </group>
@@ -304,7 +287,8 @@ export function InteractiveModel({
         <group ref={overlayRef}>
           {hasModel && modelUrl ? (
             <React.Suspense fallback={null}>
-              <GlbLayer url={modelUrl} material={overlayMaterial} />
+              {/* Overlay layer: override with shader material */}
+              <GlbLayer url={modelUrl} overrideMaterial={overlayMaterial} />
             </React.Suspense>
           ) : null}
         </group>

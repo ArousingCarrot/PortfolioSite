@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { InteractiveModel } from "./InteractiveModel";
 import { useBackgroundEffects } from "./BackgroundEffectsProvider";
 
 const MODEL_PATH = "/models/hero.glb";
+const BG = "#050508";
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = React.useState(false);
@@ -36,12 +38,8 @@ function useTouchOnly() {
 }
 
 export function BackgroundCanvas() {
-  const {
-    pulse,
-    triggerInferencePulse,
-    idleEnabled,
-    setInferenceIdleEnabled,
-  } = useBackgroundEffects();
+  const { pulse, triggerInferencePulse, idleEnabled, setInferenceIdleEnabled } =
+    useBackgroundEffects();
 
   const [eventSource, setEventSource] = React.useState<HTMLElement | null>(null);
   const [debug, setDebug] = React.useState(false);
@@ -63,14 +61,8 @@ export function BackgroundCanvas() {
     };
   }, []);
 
-  // Avoid a preflight HEAD gate here:
-  // - Some hosts/CDNs treat HEAD differently than GET.
-  // - It introduces a brief "null model" window where the fallback mesh flashes.
-  // Let GLTF loading handle readiness via suspense.
   const modelUrl = MODEL_PATH;
 
-  // On touch devices, enable a subtle periodic pulse so the background doesn't feel "static".
-  // (Desktop can remain hover-reactive-only.)
   React.useEffect(() => {
     if (reducedMotion) {
       setInferenceIdleEnabled(false);
@@ -79,7 +71,6 @@ export function BackgroundCanvas() {
     setInferenceIdleEnabled(touchOnly);
   }, [touchOnly, reducedMotion, setInferenceIdleEnabled]);
 
-  // Touch: fire one quick pulse shortly after mount for immediate motion discoverability.
   React.useEffect(() => {
     if (reducedMotion) return;
     if (!touchOnly) return;
@@ -94,7 +85,6 @@ export function BackgroundCanvas() {
     setDebug(isDev && params.has("debug3d"));
   }, [isDev]);
 
-  // DEV: press P to trigger a pulse
   React.useEffect(() => {
     if (!isDev) return;
 
@@ -116,20 +106,6 @@ export function BackgroundCanvas() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isDev, triggerInferencePulse, debug]);
 
-  // DEV: self-test pulse after mount
-  React.useEffect(() => {
-    if (!isDev) return;
-    const t = window.setTimeout(() => {
-      triggerInferencePulse({
-        intensity: debug ? 1 : 0.85,
-        durationMs: 900,
-        mode: "ai",
-      });
-    }, 550);
-    return () => window.clearTimeout(t);
-  }, [isDev, triggerInferencePulse, debug]);
-
-  // Optional idle pulses
   React.useEffect(() => {
     if (!idleEnabled) return;
     if (reducedMotion) return;
@@ -153,18 +129,33 @@ export function BackgroundCanvas() {
   }, [idleEnabled, reducedMotion, triggerInferencePulse]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
+    <div
+      className="pointer-events-none fixed inset-0 z-0"
+      aria-hidden="true"
+      style={{ backgroundColor: BG }} // prevents any transparency flash
+    >
       <Canvas
         camera={{ position: [0, 0, 3.6], fov: 55 }}
         dpr={[1, 2]}
         eventSource={eventSource ?? undefined}
         eventPrefix="client"
         frameloop={reducedMotion ? "demand" : "always"}
-        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        gl={{
+          antialias: true,
+          alpha: false, // important: avoid transparent canvas over white
+          powerPreference: "high-performance",
+        }}
+        onCreated={({ gl }) => {
+          gl.setClearColor(new THREE.Color(BG), 1);
+          gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.0;
+        }}
       >
         <ambientLight intensity={0.55} />
-        <directionalLight position={[2.5, 3, 2]} intensity={1.2} />
-        <directionalLight position={[-3, -2, -2]} intensity={0.6} />
+        <hemisphereLight intensity={0.45} groundColor={new THREE.Color("#050508")} />
+        <directionalLight position={[2.5, 3, 2]} intensity={1.35} />
+        <directionalLight position={[-3, -2, -2]} intensity={0.65} />
 
         <InteractiveModel
           modelUrl={modelUrl}
