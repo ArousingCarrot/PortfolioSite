@@ -42,9 +42,12 @@ export default function RootLayout({
 
   return (
     <html lang="en" style={{ backgroundColor: BG, colorScheme: "dark" }}>
-      <head>
-        <style>{`html, body { background: ${BG}; }`}</style>
-      </head>
+<head>
+  <style>{`
+    html, body { background: #0a0a0d; }
+    canvas { background: transparent !important; }
+  `}</style>
+</head>
       <body
         style={{ backgroundColor: BG }}
         className={`${geistSans.variable} ${geistMono.variable} antialiased text-neutral-100`}
