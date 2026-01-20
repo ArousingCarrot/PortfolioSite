@@ -12,10 +12,7 @@ import {
 } from "./createMouseDisplaceMaterial";
 import { useFitToViewport } from "./useFitToViewport";
 import { InferenceOverlay } from "./InferenceOverlay";
-import type {
-  InferencePulseMode,
-  InferencePulseState,
-} from "./BackgroundEffectsProvider";
+import type { InferencePulseMode, InferencePulseState } from "./BackgroundEffectsProvider";
 
 type GLTF = {
   scene: THREE.Group;
@@ -24,9 +21,35 @@ type GLTF = {
   parser?: any;
 };
 
+const BASE_DARK = new THREE.MeshStandardMaterial({
+  color: "#101014",
+  roughness: 0.75,
+  metalness: 0.05,
+  flatShading: true,
+});
+BASE_DARK.needsUpdate = true;
+
+const GOLD = new THREE.Color("#f0d07a");
+const GOLD_BASE = new THREE.Color("#cdb57a");
+
 function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix4) {
   const invTarget = new THREE.Matrix4().copy(targetWorld).invert();
   return new THREE.Matrix4().multiplyMatrices(invTarget, sourceWorld);
+}
+
+function pulseEnvelope(p01: number) {
+  const t = Math.min(Math.max(p01, 0), 1);
+  const attack = Math.min(t / 0.18, 1);
+  const decayT = Math.max((t - 0.18) / 0.82, 0);
+  const decay = 1 - decayT * decayT;
+  return attack * decay;
+}
+
+function pulseColor(mode: InferencePulseMode) {
+  // You can expand this later; keeping "ai" gold for now.
+  if (mode === "neutral") return new THREE.Color("#9aa0aa");
+  if (mode === "system") return new THREE.Color("#f0d07a");
+  return new THREE.Color("#f0d07a");
 }
 
 type InteractiveModelProps = {
@@ -53,7 +76,12 @@ function useOverlayMaterial(options: {
   idleStrength: number;
 }) {
   const material = React.useMemo(
-    () => createMouseDisplaceMaterial(options),
+    () =>
+      createMouseDisplaceMaterial({
+        ...options,
+        color: GOLD_BASE,
+        pulseColor: GOLD,
+      }),
     [options]
   );
 
@@ -61,6 +89,7 @@ function useOverlayMaterial(options: {
     material.wireframe = true;
     material.transparent = true;
     material.depthWrite = false;
+    material.toneMapped = false;
     return () => material.dispose();
   }, [material]);
 
@@ -79,12 +108,12 @@ function isMeshWithBufferGeometry(obj: Object3D): obj is MeshWithGeom {
 
 function GlbLayer({
   url,
-  overrideMaterial,
+  material,
   onReady,
   onGeometryReady,
 }: {
   url: string;
-  overrideMaterial?: Material;
+  material: Material;
   onReady?: () => void;
   onGeometryReady?: (geometry: BufferGeometry, meshWorld: Matrix4) => void;
 }) {
@@ -106,11 +135,7 @@ function GlbLayer({
       if (!isMeshWithBufferGeometry(obj)) return;
 
       const mesh = obj;
-
-      // Only override materials if explicitly provided (overlay layer).
-      if (overrideMaterial) {
-        mesh.material = overrideMaterial;
-      }
+      mesh.material = material;
 
       const geom = mesh.geometry;
       if (!geom.boundingBox) geom.computeBoundingBox();
@@ -133,7 +158,7 @@ function GlbLayer({
 
     candidate.updateWorldMatrix(true, false);
     onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
-  }, [scene, overrideMaterial, onReady, onGeometryReady]);
+  }, [scene, material, onReady, onGeometryReady]);
 
   return <primitive object={scene} />;
 }
@@ -141,7 +166,7 @@ function GlbLayer({
 export function InteractiveModel({
   radius = 0.65,
   strength = 0.4,
-  opacity = 0.45,
+  opacity = 0.35,
   idleStrength = 0.02,
   modelScale = 1,
   modelUrl,
@@ -151,15 +176,14 @@ export function InteractiveModel({
   debug = false,
   inferencePulse = null,
   inferenceMode = "ai",
-  inferenceBaseOpacity = 0.05,
+  inferenceBaseOpacity = 0.06,
 }: InteractiveModelProps) {
   const baseRef = React.useRef<THREE.Group | null>(null);
   const overlayRef = React.useRef<THREE.Group | null>(null);
   const debugRef = React.useRef<THREE.Mesh | null>(null);
 
   const ownedSourceGeometryRef = React.useRef<THREE.BufferGeometry | null>(null);
-  const [sourceGeometry, setSourceGeometry] =
-    React.useState<THREE.BufferGeometry | null>(null);
+  const [sourceGeometry, setSourceGeometry] = React.useState<THREE.BufferGeometry | null>(null);
 
   const { rootRef, contentRef, fitScale, refit } = useFitToViewport({
     marginY: 0.1,
@@ -171,60 +195,10 @@ export function InteractiveModel({
     () => ({ radius, strength, opacity, idleStrength }),
     [radius, strength, opacity, idleStrength]
   );
-
   const overlayMaterial = useOverlayMaterial(overlayOptions);
 
   const { raycaster, pointer, camera } = useThree();
   const tempPoint = React.useMemo(() => new THREE.Vector3(), []);
-
-  React.useEffect(() => {
-    const uniforms = overlayMaterial.uniforms as MouseDisplaceUniforms;
-    uniforms.uRadius.value = radius;
-    uniforms.uOpacity.value = opacity;
-  }, [overlayMaterial, radius, opacity]);
-
-  useFrame((_, delta) => {
-    const uniforms = overlayMaterial.uniforms as MouseDisplaceUniforms;
-
-    if (reducedMotion) {
-      uniforms.uStrength.value = 0;
-      uniforms.uIdleStrength.value = 0;
-      uniforms.uMouse.value.copy(FAR_POINT);
-      return;
-    }
-
-    uniforms.uTime.value += delta;
-
-    if (touchOnly) {
-      uniforms.uStrength.value = 0;
-      uniforms.uIdleStrength.value = idleStrength;
-      uniforms.uMouse.value.copy(FAR_POINT);
-      return;
-    }
-
-    uniforms.uStrength.value = strength;
-    uniforms.uIdleStrength.value = idleStrength;
-
-    if (!baseRef.current || !overlayRef.current || !hasPointer) {
-      uniforms.uMouse.value.copy(FAR_POINT);
-      return;
-    }
-
-    raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObject(baseRef.current, true);
-
-    if (hits.length > 0) {
-      tempPoint.copy(hits[0].point);
-      overlayRef.current.worldToLocal(tempPoint);
-      uniforms.uMouse.value.copy(tempPoint);
-
-      if (debugRef.current) debugRef.current.position.copy(tempPoint);
-    } else {
-      uniforms.uMouse.value.copy(FAR_POINT);
-    }
-  });
-
-  const hasModel = Boolean(modelUrl);
 
   const handleGlbGeometry = React.useCallback(
     (geometry: THREE.BufferGeometry, meshWorld: THREE.Matrix4) => {
@@ -252,18 +226,6 @@ export function InteractiveModel({
   );
 
   React.useEffect(() => {
-    if (!hasModel) {
-      if (ownedSourceGeometryRef.current) {
-        ownedSourceGeometryRef.current.dispose();
-        ownedSourceGeometryRef.current = null;
-      }
-      setSourceGeometry(null);
-      return;
-    }
-    setSourceGeometry(null);
-  }, [hasModel, modelUrl]);
-
-  React.useEffect(() => {
     return () => {
       if (ownedSourceGeometryRef.current) {
         ownedSourceGeometryRef.current.dispose();
@@ -272,25 +234,77 @@ export function InteractiveModel({
     };
   }, []);
 
+  useFrame((_, delta) => {
+    const uniforms = overlayMaterial.uniforms as unknown as MouseDisplaceUniforms;
+
+    if (reducedMotion) {
+      uniforms.uStrength.value = 0;
+      uniforms.uIdleStrength.value = 0;
+      uniforms.uMouse.value.copy(FAR_POINT);
+      uniforms.uPulse.value = 0;
+      return;
+    }
+
+    // Always tick time so mobile still "breathes"
+    uniforms.uTime.value += delta;
+
+    // Pulse drives gold intensity on the bust overlay
+    let pulse = 0;
+    if (inferencePulse) {
+      const now = performance.now();
+      const elapsed = now - inferencePulse.startTime;
+      if (elapsed >= 0 && elapsed <= inferencePulse.durationMs) {
+        const p01 = elapsed / inferencePulse.durationMs;
+        pulse = pulseEnvelope(p01) * inferencePulse.intensity;
+        uniforms.uPulseColor.value.copy(pulseColor(inferencePulse.mode ?? inferenceMode));
+      }
+    }
+    uniforms.uPulse.value = pulse;
+
+    // Touch: no mouse deformation, keep idle breathing
+    if (touchOnly) {
+      uniforms.uStrength.value = 0;
+      uniforms.uIdleStrength.value = idleStrength;
+      uniforms.uMouse.value.copy(FAR_POINT);
+      return;
+    }
+
+    uniforms.uStrength.value = strength;
+    uniforms.uIdleStrength.value = idleStrength;
+
+    if (!baseRef.current || !overlayRef.current || !hasPointer) {
+      uniforms.uMouse.value.copy(FAR_POINT);
+      return;
+    }
+
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObject(baseRef.current, true);
+
+    if (hits.length > 0) {
+      tempPoint.copy(hits[0].point);
+      overlayRef.current.worldToLocal(tempPoint);
+      uniforms.uMouse.value.copy(tempPoint);
+      if (debugRef.current) debugRef.current.position.copy(tempPoint);
+    } else {
+      uniforms.uMouse.value.copy(FAR_POINT);
+    }
+  });
+
+  if (!modelUrl) return null;
+
   return (
     <group ref={rootRef} scale={fitScale * modelScale}>
       <group ref={contentRef}>
         <group ref={baseRef}>
-          {hasModel && modelUrl ? (
-            <React.Suspense fallback={null}>
-              {/* Base layer: keep GLB materials so lighting reads correctly */}
-              <GlbLayer url={modelUrl} onReady={refit} onGeometryReady={handleGlbGeometry} />
-            </React.Suspense>
-          ) : null}
+          <React.Suspense fallback={null}>
+            <GlbLayer url={modelUrl} material={BASE_DARK} onReady={refit} onGeometryReady={handleGlbGeometry} />
+          </React.Suspense>
         </group>
 
         <group ref={overlayRef}>
-          {hasModel && modelUrl ? (
-            <React.Suspense fallback={null}>
-              {/* Overlay layer: override with shader material */}
-              <GlbLayer url={modelUrl} overrideMaterial={overlayMaterial} />
-            </React.Suspense>
-          ) : null}
+          <React.Suspense fallback={null}>
+            <GlbLayer url={modelUrl} material={overlayMaterial} />
+          </React.Suspense>
         </group>
 
         {sourceGeometry ? (
