@@ -28,17 +28,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Inline background + dot-grid: prevents any white flash before CSS loads.
-  const prepaintStyle: React.CSSProperties = {
-    backgroundColor: BG,
-    backgroundImage: `
-      radial-gradient(${DOT} 1px, transparent 1px),
-      radial-gradient(900px circle at 30% 25%, rgba(255,255,255,0.06), transparent 55%),
-      radial-gradient(900px circle at 70% 65%, rgba(255,215,120,0.035), transparent 58%)
-    `,
-    backgroundSize: "28px 28px, auto, auto",
-    backgroundPosition: "center, center, center",
-  };
+const prepaintStyle: React.CSSProperties = {
+  backgroundColor: BG,
+  backgroundImage: `
+    radial-gradient(900px circle at 30% 25%, rgba(255,255,255,0.06), transparent 55%),
+    radial-gradient(900px circle at 70% 65%, rgba(255,215,120,0.035), transparent 58%)
+  `,
+  backgroundSize: "auto, auto",
+  backgroundPosition: "center, center",
+};
 
   return (
     <html lang="en" style={{ backgroundColor: BG, colorScheme: "dark" }}>

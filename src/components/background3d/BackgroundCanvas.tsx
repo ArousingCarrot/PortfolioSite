@@ -12,8 +12,12 @@ const MODEL_PATH = "/models/hero.glb";
 const INTRO_PULSE_DELAY_MS = 650;
 const INTRO_PULSE = { intensity: 0.55, durationMs: 850, mode: "system" as const };
 
-const IDLE_PULSE = { intensity: 0.85, durationMs: 1200, mode: "system" as const };
+const IDLE_PULSE = { intensity: 0.55, durationMs: 1200, mode: "system" as const };
 const IDLE_PULSE_INTERVAL_MS = { base: 5000, jitter: 100 };
+
+// Grid reactivity
+const GRID_Z = -1.55;
+const GRID_REACT = 0.9;
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = React.useState(false);
@@ -63,7 +67,7 @@ function PointGrid({
   pointSize = 2.25,
   color = "#a9a8b2",
   opacity = 0.45,
-  reactStrength = 0,
+  reactStrength = 1.0,
   mouse,
 }: PointGridProps) {
   const { camera, size } = useThree();
@@ -139,38 +143,44 @@ function PointGrid({
         uReactStrength: { value: reactStrength },
         uMouse: { value: mouse ? mouse.clone() : new THREE.Vector2(999, 999) },
       },
-      vertexShader: /* glsl */ `
-        uniform float uTime;
-        uniform float uPointSize;
-        uniform float uReactStrength;
-        uniform vec2 uMouse;
+vertexShader: /* glsl */ `
+  uniform float uTime;
+  uniform float uPointSize;
+  uniform float uReactStrength;
+  uniform vec2 uMouse;
 
-        varying float vFalloff;
+  varying float vFalloff;
 
-        float sat(float x) { return clamp(x, 0.0, 1.0); }
+  float sat(float x) { return clamp(x, 0.0, 1.0); }
 
-        void main() {
-          vec3 pos = position;
+  void main() {
+    vec3 pos = position;
 
-          // Future expansion hook:
-          // - Supply uMouse in the grid plane's local XY
-          // - Increase uReactStrength > 0
-          float d = distance(pos.xy, uMouse);
-          float falloff = exp(-d * d * 1.6);
-          vFalloff = sat(falloff);
+    float d = distance(pos.xy, uMouse);
+    float falloff = exp(-d * d * 2.2);
+    vFalloff = sat(falloff);
 
-          // Kept at 0.0 for now (reactStrength defaults to 0).
-          float wobble = sin(uTime + pos.x * 2.0 + pos.y * 2.0) * 0.03;
-          pos.z += wobble * vFalloff * uReactStrength;
+    float bulge = vFalloff * uReactStrength;
 
-          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-          gl_Position = projectionMatrix * mv;
+    // Curvature toward camera near cursor
+    pos.z += bulge * 0.22;
 
-          // Size attenuation (perspective). Clamp to keep it subtle.
-          float atten = 220.0 / max(1.0, -mv.z);
-          gl_PointSize = clamp(uPointSize * atten, 1.0, 4.0);
-        }
-      `,
+    // Slight XY pull to enhance bend illusion
+    vec2 toMouse = (uMouse - pos.xy);
+    pos.xy += toMouse * (0.045 * bulge);
+
+    // Micro shimmer only when reactive
+    float shimmer = sin(uTime * 1.2 + pos.x * 1.4 + pos.y * 1.4) * 0.01;
+    pos.z += shimmer * bulge;
+
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_Position = projectionMatrix * mv;
+
+    float atten = 220.0 / max(1.0, -mv.z);
+    gl_PointSize = clamp(uPointSize * atten, 1.0, 4.0);
+  }
+`,
+
       fragmentShader: /* glsl */ `
         uniform vec3 uColor;
         uniform float uOpacity;
@@ -207,15 +217,57 @@ function PointGrid({
     material.uniforms.uMouse.value = mouse ? mouse.clone() : new THREE.Vector2(999, 999);
   }, [material, mouse]);
 
-  useFrame((_, delta) => {
-    const m = materialRef.current;
-    if (!m) return;
+useFrame((_, delta) => {
+  const m = materialRef.current;
+  if (!m) return;
 
-    // No visual effect until reactStrength > 0
-    m.uniforms.uTime.value += delta;
-  });
+  m.uniforms.uTime.value += delta;
+  m.uniforms.uReactStrength.value = reactStrength;
+
+  if (mouse) m.uniforms.uMouse.value.copy(mouse);
+  else m.uniforms.uMouse.value.set(999, 999);
+});
 
   return <points geometry={geometry} material={material} frustumCulled={false} renderOrder={1} />;
+}
+
+function GridMouseTracker({
+  planeZ,
+  mouse,
+  enabled,
+  smoothing = 0.18,
+}: {
+  planeZ: number;
+  mouse: THREE.Vector2;
+  enabled: boolean;
+  smoothing?: number;
+}) {
+  const { raycaster, pointer, camera } = useThree();
+  const plane = React.useMemo(
+    () => new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ),
+    [planeZ]
+  );
+  const hit = React.useMemo(() => new THREE.Vector3(), []);
+  const target = React.useMemo(() => new THREE.Vector2(999, 999), []);
+
+  useFrame(() => {
+    if (!enabled) {
+      mouse.set(999, 999);
+      return;
+    }
+
+    raycaster.setFromCamera(pointer, camera);
+    const res = raycaster.ray.intersectPlane(plane, hit);
+    if (!res) {
+      mouse.set(999, 999);
+      return;
+    }
+
+    target.set(hit.x, hit.y);
+    mouse.lerp(target, smoothing);
+  });
+
+  return null;
 }
 
 export function BackgroundCanvas() {
@@ -232,6 +284,8 @@ export function BackgroundCanvas() {
   const reducedMotion = usePrefersReducedMotion();
   const touchOnly = useTouchOnly();
   const isDev = process.env.NODE_ENV !== "production";
+  const gridMouse = React.useMemo(() => new THREE.Vector2(999, 999), []);
+  const gridReactiveEnabled = !reducedMotion && !touchOnly && hasPointer;
 
   React.useEffect(() => setEventSource(document.body), []);
 
@@ -303,7 +357,7 @@ export function BackgroundCanvas() {
             height: "100%",
             display: "block",
           }}
-          camera={{ position: [0, 0, 3.6], fov: 55 }}
+          camera={{ position: [0, 0.5, 3.6], fov: 55 }}
           dpr={[1, 2]}
           eventSource={eventSource ?? undefined}
           eventPrefix="client"
@@ -316,8 +370,16 @@ export function BackgroundCanvas() {
             requestAnimationFrame(() => setCanvasReady(true));
           }}
         >
-          {/* Stationary point grid behind the bust (future-proofed for mouse-reactive geometry). */}
-          <PointGrid />
+          <GridMouseTracker
+  planeZ={GRID_Z}
+  mouse={gridMouse}
+  enabled={gridReactiveEnabled}
+/>
+<PointGrid
+  z={GRID_Z}
+  mouse={gridMouse}
+  reactStrength={gridReactiveEnabled ? GRID_REACT : 0}
+/>
           <ambientLight intensity={0.25} />
           <hemisphereLight
             intensity={0.55}

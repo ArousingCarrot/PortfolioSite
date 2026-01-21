@@ -186,29 +186,22 @@ export function InteractiveModel({
   }, [overlayMaterial, radius, opacity]);
 
   // Click -> pulse on the wireframe overlay (manual raycast).
-  React.useEffect(() => {
-    const onPointerDown = (ev: PointerEvent) => {
-      if (reducedMotion) return;
-      const target = ev.target as HTMLElement | null;
-      if (target && target.closest("[data-ui]")) return;
-      if (!baseRef.current) return;
+React.useEffect(() => {
+  const onPointerDown = (ev: PointerEvent) => {
+    if (reducedMotion) return;
 
-      const rect = gl.domElement.getBoundingClientRect();
-      if (rect.width <= 1 || rect.height <= 1) return;
+    const el = ev.target as HTMLElement | null;
+    // Ignore clicks on actual interactive elements only
+    if (el?.closest('a,button,input,textarea,select,option,[role="button"],[data-click-block]')) {
+      return;
+    }
 
-      const x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -(((ev.clientY - rect.top) / rect.height) * 2 - 1);
+    triggerInferencePulse({ intensity: 0.95, durationMs: 900, mode: "ai" });
+  };
 
-      raycaster.setFromCamera({ x, y } as any, camera);
-      const hits = raycaster.intersectObject(baseRef.current, true);
-      if (hits.length === 0) return;
-
-triggerInferencePulse({ intensity: 0.95, durationMs: 900, mode: "ai" });
-    };
-
-    window.addEventListener("pointerdown", onPointerDown, { passive: true });
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, [raycaster, camera, gl, triggerInferencePulse, reducedMotion]);
+  window.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
+  return () => window.removeEventListener("pointerdown", onPointerDown, { capture: true } as any);
+}, [triggerInferencePulse, reducedMotion]);
 
   useFrame((_, delta) => {
     const uniforms = overlayMaterial.uniforms as MouseDisplaceUniforms;
