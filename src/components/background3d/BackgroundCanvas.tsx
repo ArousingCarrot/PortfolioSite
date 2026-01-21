@@ -12,8 +12,8 @@ const MODEL_PATH = "/models/hero.glb";
 const INTRO_PULSE_DELAY_MS = 650;
 const INTRO_PULSE = { intensity: 0.55, durationMs: 850, mode: "system" as const };
 
-const IDLE_PULSE = { intensity: 0.45, durationMs: 780, mode: "system" as const };
-const IDLE_PULSE_INTERVAL_MS = { base: 7600, jitter: 4200 };
+const IDLE_PULSE = { intensity: 0.85, durationMs: 1200, mode: "system" as const };
+const IDLE_PULSE_INTERVAL_MS = { base: 5000, jitter: 100 };
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = React.useState(false);
@@ -62,7 +62,7 @@ function PointGrid({
   spacing = 0.17,
   pointSize = 2.25,
   color = "#a9a8b2",
-  opacity = 0.16,
+  opacity = 0.45,
   reactStrength = 0,
   mouse,
 }: PointGridProps) {
@@ -335,10 +335,10 @@ export function BackgroundCanvas() {
             touchOnly={touchOnly}
             hasPointer={hasPointer}
             debug={debug}
-            radius={0.7}
-            strength={0.35}
-            opacity={0.34}
-            idleStrength={0.02}
+            radius={.4}
+            strength={0.9}
+            opacity={0.95}
+            idleStrength={0.05}
             inferencePulse={pulse}
             inferenceBaseOpacity={debug ? 0.12 : 0.06}
           />

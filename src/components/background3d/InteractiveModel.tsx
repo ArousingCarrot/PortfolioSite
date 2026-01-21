@@ -24,9 +24,9 @@ type GLTF = {
 const baseMaterial = new THREE.MeshStandardMaterial({
   color: "#14141c",
   metalness: 0.15,
-  roughness: 0.85,
+  roughness: 0.80,
   emissive: "#050508",
-  emissiveIntensity: 0.6,
+  emissiveIntensity: 0.9,
 });
 
 function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix4) {
