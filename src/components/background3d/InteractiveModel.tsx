@@ -203,7 +203,7 @@ export function InteractiveModel({
       const hits = raycaster.intersectObject(baseRef.current, true);
       if (hits.length === 0) return;
 
-      triggerInferencePulse({ intensity: 0.92, durationMs: 950, mode: "ai" });
+triggerInferencePulse({ intensity: 0.95, durationMs: 900, mode: "ai" });
     };
 
     window.addEventListener("pointerdown", onPointerDown, { passive: true });

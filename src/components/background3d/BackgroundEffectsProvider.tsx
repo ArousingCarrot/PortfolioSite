@@ -28,8 +28,8 @@ const BackgroundEffectsContext =
   React.createContext<BackgroundEffectsContextValue | null>(null);
 
 const DEFAULT_PULSE: Required<InferencePulseOptions> = {
-  intensity: 0.85,
-  durationMs: 900,
+  intensity: 0.75,
+  durationMs: 850,
   mode: "ai",
 };
 
@@ -63,9 +63,7 @@ export function BackgroundEffectsProvider({
         mode,
       });
 
-      // Always clear pulse state after it ends. This is important for
-      // reduced-motion + frameloop="demand" where we may only render
-      // on state changes.
+      // Always clear pulse state after it ends.
       clearTimerRef.current = window.setTimeout(() => {
         setPulse(null);
         clearTimerRef.current = null;
