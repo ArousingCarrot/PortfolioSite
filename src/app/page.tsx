@@ -200,47 +200,58 @@ function NowListening() {
     text: NOW_LISTENING_FALLBACK,
   });
 
-  React.useEffect(() => {
-    let cancelled = false;
+React.useEffect(() => {
+  let cancelled = false;
+  let timer: ReturnType<typeof setInterval> | undefined;
 
-    async function run() {
-      try {
-        setState({ status: "loading", text: "Loading now playing…" });
-        const res = await fetch("/api/now-playing", { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as {
-          isPlaying?: boolean;
-          title?: string;
-          artist?: string;
-          trackUrl?: string;
-          imageUrl?: string;
-        };
+  async function run() {
+    try {
+      setState((prev) =>
+        prev.status === "ready" ? prev : { ...prev, status: "loading", text: "Loading now playing…" }
+      );
 
-        if (cancelled) return;
+      const res = await fetch("/api/now-playing", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        if (!data?.isPlaying || !data?.title) {
-          setState({ status: "ready", text: "Not playing right now.", isPlaying: false });
-          return;
-        }
+      const data = (await res.json()) as {
+        isPlaying?: boolean;
+        title?: string;
+        artist?: string;
+        trackUrl?: string;
+        imageUrl?: string;
+      };
 
-        const text = data.artist ? `${data.title} by ${data.artist}` : data.title;
-        setState({
-          status: "ready",
-          text,
-          href: data.trackUrl,
-          imageUrl: data.imageUrl,
-          isPlaying: true,
-        });
-      } catch {
-        if (!cancelled) setState({ status: "error", text: NOW_LISTENING_FALLBACK });
+      if (cancelled) return;
+
+      if (!data?.title) {
+        setState({ status: "ready", text: "No recent track found.", isPlaying: false });
+        return;
       }
-    }
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      const base = data.artist ? `${data.title} by ${data.artist}` : data.title;
+      const text = data.isPlaying ? base : `Last played: ${base}`;
+
+      setState({
+        status: "ready",
+        text,
+        href: data.trackUrl,
+        imageUrl: data.imageUrl,
+        isPlaying: !!data.isPlaying,
+      });
+    } catch {
+      if (!cancelled) setState({ status: "error", text: NOW_LISTENING_FALLBACK });
+    }
+  }
+
+  run();
+  timer = setInterval(run, 15_000);
+
+  return () => {
+    cancelled = true;
+    if (timer) clearInterval(timer);
+  };
+}, []);
+
 
   return (
     <div className="mt-2 flex items-start gap-3 text-sm text-neutral-300">

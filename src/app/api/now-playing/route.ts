@@ -27,10 +27,15 @@ export async function GET() {
   const apiKey = process.env.LASTFM_API_KEY;
   const user = process.env.LASTFM_USER;
 
+  const cacheHeaders = {
+    // Cloudflare cache (s-maxage) for 5s, allow serving stale while revalidating for 30s
+    "Cache-Control": "public, s-maxage=5, stale-while-revalidate=30",
+};
+
   if (!apiKey || !user) {
     return Response.json(
       { ok: false, error: "Missing LASTFM_API_KEY or LASTFM_USER." },
-      { status: 500 }
+      { status: 500, headers: cacheHeaders }
     );
   }
 
@@ -50,7 +55,7 @@ export async function GET() {
     if (!res.ok) {
       return Response.json(
         { ok: false, error: `Last.fm HTTP ${res.status}` },
-        { status: 502 }
+        { status: 502, headers: cacheHeaders }
       );
     }
 
@@ -58,7 +63,10 @@ export async function GET() {
 
     const track = asArray<LastFmTrack>(json?.recenttracks?.track)[0];
     if (!track?.name) {
-      return Response.json({ ok: true, isPlaying: false }, { status: 200 });
+      return Response.json(
+        { ok: true, isPlaying: false },
+        { status: 200, headers: cacheHeaders }
+     ); 
     }
 
     const isPlaying = track?.["@attr"]?.nowplaying === "true";
@@ -103,12 +111,12 @@ export async function GET() {
         imageUrl,
         playedAtUts: track?.date?.uts ? Number(track.date.uts) : undefined,
       },
-      { status: 200 }
+      { status: 200, headers: cacheHeaders }
     );
   } catch {
     return Response.json(
       { ok: false, error: "Failed to reach Last.fm." },
-      { status: 502 }
+      { status: 502, headers: cacheHeaders }
     );
   }
 }
