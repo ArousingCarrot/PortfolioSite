@@ -257,32 +257,34 @@ function NowListening() {
       </div>
 
       <div className="min-w-0">
-        {state.isPlaying ? (
-          <div className="mb-1 inline-flex items-center gap-2 text-xs text-neutral-400">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500/60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-            </span>
-            <span className="uppercase tracking-widest">Live</span>
-          </div>
-        ) : null}
+{state.isPlaying ? (
+  <div className="mb-1 flex items-center gap-2 text-xs text-neutral-400">
+    <span className="relative flex h-2.5 w-2.5">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500/60" />
+      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+    </span>
+    <span className="uppercase tracking-widest">Live</span>
+  </div>
+) : null}
 
-        {state.href ? (
-          <a
-            href={state.href}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 text-yellow-200/90 hover:text-yellow-200"
-            title="Open in Last.fm"
-          >
-            <span className="truncate">{state.text}</span>
-            <ExternalLinkIcon className="h-4 w-4" />
-          </a>
-        ) : (
-          <span className={classNames(state.status === "loading" && "text-neutral-400")}>
-            {state.text}
-          </span>
-        )}
+<div className="min-w-0">
+  {state.href ? (
+    <a
+      href={state.href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-2 text-yellow-200/90 hover:text-yellow-200"
+      title="Open in Last.fm"
+    >
+      <span className="truncate">{state.text}</span>
+      <ExternalLinkIcon className="h-4 w-4" />
+    </a>
+  ) : (
+    <span className={classNames(state.status === "loading" && "text-neutral-400")}>
+      {state.text}
+    </span>
+  )}
+</div>
       </div>
     </div>
   );
