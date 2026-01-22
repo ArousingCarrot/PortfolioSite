@@ -1,5 +1,3 @@
-export const runtime = "edge";
-
 type LastFmImage = { ["#text"]?: string; size?: string };
 type LastFmTrack = {
   name?: string;
