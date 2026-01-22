@@ -19,9 +19,11 @@ const DOT = "rgba(255,255,255,0.045)"; // subtle dots
 
 export const metadata: Metadata = {
   title: "Samuel J. Baker IV",
-  description: "Portfolio",
+  description:
+    "AI-focused CS student at the University of Virginia. Projects in computer vision, local LLM workflows, and performance-oriented systems.",
   themeColor: BG,
 };
+
 
 export default function RootLayout({
   children,
