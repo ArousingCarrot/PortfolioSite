@@ -193,6 +193,8 @@ function NowListening() {
     status: "idle" | "loading" | "ready" | "error";
     text: string;
     href?: string;
+    imageUrl?: string;
+    isPlaying?: boolean;
   }>({
     status: "idle",
     text: NOW_LISTENING_FALLBACK,
@@ -204,24 +206,31 @@ function NowListening() {
     async function run() {
       try {
         setState({ status: "loading", text: "Loading now playing…" });
-        const res = await fetch("/api/now-playing", { cache: "no-store" });        
+        const res = await fetch("/api/now-playing", { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as {
           isPlaying?: boolean;
           title?: string;
           artist?: string;
           trackUrl?: string;
+          imageUrl?: string;
         };
 
         if (cancelled) return;
 
         if (!data?.isPlaying || !data?.title) {
-          setState({ status: "ready", text: "Not playing right now." });
+          setState({ status: "ready", text: "Not playing right now.", isPlaying: false });
           return;
         }
 
         const text = data.artist ? `${data.title} by ${data.artist}` : data.title;
-        setState({ status: "ready", text, href: data.trackUrl });
+        setState({
+          status: "ready",
+          text,
+          href: data.trackUrl,
+          imageUrl: data.imageUrl,
+          isPlaying: true,
+        });
       } catch {
         if (!cancelled) setState({ status: "error", text: NOW_LISTENING_FALLBACK });
       }
@@ -234,23 +243,47 @@ function NowListening() {
   }, []);
 
   return (
-    <div className="mt-2 text-sm text-neutral-300">
-      {state.href ? (
-        <a
-          href={state.href}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 text-yellow-200/90 hover:text-yellow-200"
-          title="Open in Last.fm"
-        >
-          <span>{state.text}</span>
-          <ExternalLinkIcon className="h-4 w-4" />
-        </a>
-      ) : (
-        <span className={classNames(state.status === "loading" && "text-neutral-400")}>
-          {state.text}
-        </span>
-      )}
+    <div className="mt-2 flex items-start gap-3 text-sm text-neutral-300">
+      <div className="h-12 w-12 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/40">
+        {state.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={state.imageUrl}
+            alt="Album art"
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : null}
+      </div>
+
+      <div className="min-w-0">
+        {state.isPlaying ? (
+          <div className="mb-1 inline-flex items-center gap-2 text-xs text-neutral-400">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500/60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+            </span>
+            <span className="uppercase tracking-widest">Live</span>
+          </div>
+        ) : null}
+
+        {state.href ? (
+          <a
+            href={state.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-yellow-200/90 hover:text-yellow-200"
+            title="Open in Last.fm"
+          >
+            <span className="truncate">{state.text}</span>
+            <ExternalLinkIcon className="h-4 w-4" />
+          </a>
+        ) : (
+          <span className={classNames(state.status === "loading" && "text-neutral-400")}>
+            {state.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -613,7 +646,7 @@ export default function Page() {
                 <p className="text-sm font-medium text-neutral-200">What I am listening to</p>
                 <NowListening />
                 <p className="mt-3 text-xs text-neutral-500">
-  Powered by Last.fm. Configure LASTFM_API_KEY and LASTFM_USER in Cloudflare Pages. Updates on page load.
+  Powered by Last.fm.
                 </p>
               </div>
             </div>

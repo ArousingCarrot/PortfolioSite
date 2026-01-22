@@ -70,7 +70,27 @@ export async function GET() {
     const album =
       typeof track.album === "string" ? track.album : track.album?.["#text"] ?? "";
     const trackUrl = track.url ?? "";
-    const imageUrl = pickLargestImage(track.image);
+    let imageUrl = pickLargestImage(track.image);
+
+    if (!imageUrl && title && artist) {
+      const infoUrl = new URL("https://ws.audioscrobbler.com/2.0/");
+      infoUrl.searchParams.set("method", "track.getInfo");
+      infoUrl.searchParams.set("api_key", apiKey);
+      infoUrl.searchParams.set("artist", artist);
+      infoUrl.searchParams.set("track", title);
+      infoUrl.searchParams.set("autocorrect", "1");
+      infoUrl.searchParams.set("format", "json");
+
+      const infoRes = await fetch(infoUrl.toString(), {
+        cache: "no-store",
+        headers: { "User-Agent": "samueljbaker.dev (Last.fm now-playing)" },
+      });
+
+      if (infoRes.ok) {
+        const infoJson = (await infoRes.json()) as any;
+        imageUrl = pickLargestImage(infoJson?.track?.album?.image) ?? imageUrl;
+      }
+    }
 
     return Response.json(
       {
