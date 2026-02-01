@@ -5,6 +5,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { now } from "../content/now";
 
+const HEADSHOT_SRC = "/headshot.jpg";
+
 type Social = {
   name: string;
   href: string;
@@ -410,37 +412,68 @@ export default function Page() {
       </div>
 
       <main id="top" className="relative z-10 container mx-auto px-6 py-14 md:py-20">
-<motion.header
+        <motion.header
   initial={{ opacity: 0, y: 16 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 0.8 }}
   className="max-w-4xl"
 >
-  <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-    <div className="shrink-0">
-      <div className="relative h-24 w-24 md:h-28 md:w-28 rounded-full overflow-hidden ring-1 ring-yellow-300/60 bg-neutral-900/40">
-        <Image
-          src="/headshot.jpg"
-          alt="Samuel J. Baker IV"
-          fill
-          sizes="(max-width: 640px) 96px, 112px"
-          className="object-cover"
-          priority
-        />
+  <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+    <div className="min-w-0 flex-1">
+          <p className="tracking-widest text-xs uppercase text-neutral-400">Computer Science (AI) at UVA</p>
+
+          <h1 className="mt-3 text-4xl md:text-6xl font-semibold leading-tight">
+            Samuel J. Baker IV
+          </h1>
+
+          <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">
+            I am a third-year CS student on the AI focal path at the University of Virginia, originally from Heathsville, Virginia.
+            I like building practical AI systems that feel usable, fast, and honest about constraints. That includes computer vision
+            pipelines, local LLM workflows, and agentic game systems. I also spend a lot of time in C++ optimizing hot paths and tooling,
+            because I'm obsessed with performance optimization.
+          </p>
+
+          <p className="mt-4 text-base text-neutral-400 leading-relaxed">
+            Outside of code, I care about game design, weightlifting, film, music (guitar), and reading. If you want a quick snapshot
+            of what I am doing other than projects, scroll to the Now section.
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <a
+              href="#projects"
+              className="rounded-2xl border border-yellow-300/40 bg-yellow-300/10 px-5 py-2 text-yellow-100 hover:bg-yellow-300/15 transition"
+            >
+              Explore projects
+            </a>
+            <a
+              href="/Samuel_Baker_Resume.pdf"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
+            >
+              Open resume
+            </a>
+            <a
+              href="mailto:samuel.j.baker908@gmail.com"
+              className="rounded-2xl border border-neutral-800 px-5 py-2 hover:bg-neutral-900/60 transition"
+            >
+              Email me
+            </a>
+    </div>
+
+    <div className="flex justify-center md:justify-end md:pt-2">
+      <div className="relative h-32 w-32 md:h-40 md:w-40 rounded-full border border-yellow-300/50 bg-neutral-900/30 p-[2px] backdrop-blur-sm">
+        <div className="relative h-full w-full overflow-hidden rounded-full">
+          <Image
+            src={HEADSHOT_SRC}
+            alt="Samuel J. Baker IV headshot"
+            fill
+            sizes="(min-width: 768px) 160px, 128px"
+            className="object-cover"
+            priority
+          />
+        </div>
       </div>
     </div>
-
-    <div className="min-w-0">
-      <p className="tracking-widest text-xs uppercase text-neutral-400">
-        Computer Science (AI) at UVA
-      </p>
-
-      <h1 className="mt-3 text-4xl md:text-6xl font-semibold leading-tight">
-        Samuel J. Baker IV
-      </h1>
-
-      {/* keep the rest of your existing header content here (paragraphs + buttons) */}
-    </div>
+  </div>
   </div>
 </motion.header>
 
