@@ -413,69 +413,73 @@ export default function Page() {
 
       <main id="top" className="relative z-10 container mx-auto px-6 py-14 md:py-20">
         <motion.header
-  initial={{ opacity: 0, y: 16 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8 }}
-  className="max-w-4xl"
->
-  <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-    <div className="min-w-0 flex-1">
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="max-w-5xl"
+        >
           <p className="tracking-widest text-xs uppercase text-neutral-400">Computer Science (AI) at UVA</p>
 
-          <h1 className="mt-3 text-4xl md:text-6xl font-semibold leading-tight">
-            Samuel J. Baker IV
-          </h1>
+          <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-stretch">
+            <div className="min-w-0">
+              <h1 className="text-4xl md:text-6xl font-semibold leading-tight">Samuel J. Baker IV</h1>
 
-          <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">
-            I am a third-year CS student on the AI focal path at the University of Virginia, originally from Heathsville, Virginia.
-            I like building practical AI systems that feel usable, fast, and honest about constraints. That includes computer vision
-            pipelines, local LLM workflows, and agentic game systems. I also spend a lot of time in C++ optimizing hot paths and tooling,
-            because I'm obsessed with performance optimization.
-          </p>
+              <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">
+                I am a third-year CS student on the AI focal path at the University of Virginia, originally from Heathsville, Virginia.
+                I like building practical AI systems that feel usable, fast, and honest about constraints. That includes computer vision
+                pipelines, local LLM workflows, and agentic game systems. I also spend a lot of time in C++ optimizing hot paths and tooling,
+                because I'm obsessed with performance optimization.
+              </p>
 
-          <p className="mt-4 text-base text-neutral-400 leading-relaxed">
-            Outside of code, I care about game design, weightlifting, film, music (guitar), and reading. If you want a quick snapshot
-            of what I am doing other than projects, scroll to the Now section.
-          </p>
+              <p className="mt-4 text-base text-neutral-400 leading-relaxed">
+                Outside of code, I care about game design, weightlifting, film, music (guitar), and reading. If you want a quick snapshot
+                of what I am doing other than projects, scroll to the Now section.
+              </p>
+            </div>
 
-          <div className="mt-7 flex flex-wrap gap-3">
-            <a
-              href="#projects"
-              className="rounded-2xl border border-yellow-300/40 bg-yellow-300/10 px-5 py-2 text-yellow-100 hover:bg-yellow-300/15 transition"
-            >
-              Explore projects
-            </a>
-            <a
-              href="/Samuel_Baker_Resume.pdf"
-              className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
-            >
-              Open resume
-            </a>
-            <a
-              href="mailto:samuel.j.baker908@gmail.com"
-              className="rounded-2xl border border-neutral-800 px-5 py-2 hover:bg-neutral-900/60 transition"
-            >
-              Email me
-            </a>
-    </div>
+            <div className="flex justify-center md:justify-end md:translate-x-8 lg:translate-x-30">
+              <div className="relative aspect-square h-32 md:h-full md:max-h-[360px] rounded-full border border-yellow-300/50 bg-neutral-900/30 p-[2px] backdrop-blur-sm">
+                <div className="relative h-full w-full overflow-hidden rounded-full">
+                  <Image
+                    src={HEADSHOT_SRC}
+                    alt="Samuel J. Baker IV headshot"
+                    fill
+                    sizes="(min-width: 768px) 360px, 128px"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        <div className="h-8 md:h-22" aria-hidden="true" />
 
-    <div className="flex justify-center md:justify-end md:pt-2">
-      <div className="relative h-32 w-32 md:h-40 md:w-40 rounded-full border border-yellow-300/50 bg-neutral-900/30 p-[2px] backdrop-blur-sm">
-        <div className="relative h-full w-full overflow-hidden rounded-full">
-          <Image
-            src={HEADSHOT_SRC}
-            alt="Samuel J. Baker IV headshot"
-            fill
-            sizes="(min-width: 768px) 160px, 128px"
-            className="object-cover"
-            priority
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-</motion.header>
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,360px)] md:items-start">
+          <div className="flex flex-wrap gap-3">
+              <a
+                href="#projects"
+                className="rounded-2xl border border-yellow-300/40 bg-yellow-300/10 px-5 py-2 text-yellow-100 hover:bg-yellow-300/15 transition"
+              >
+                Explore projects
+              </a>
+              <a
+                href="/Samuel_Baker_Resume.pdf"
+                className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
+              >
+                Open resume
+              </a>
+              <a
+                href="mailto:samuel.j.baker908@gmail.com"
+                className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
+              >
+                Email me
+              </a>
+            </div>
+
+          <div className="hidden md:block" aria-hidden="true" />
+          </div>
+        </motion.header>
+
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           {METRICS.map((m, i) => (
