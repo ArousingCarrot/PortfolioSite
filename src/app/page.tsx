@@ -469,7 +469,7 @@ export default function Page() {
                 Open resume
               </a>
               <a
-                href="mailto:samuel.j.baker908@gmail.com"
+                href="#contact"
                 className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
               >
                 Email me
@@ -701,12 +701,20 @@ export default function Page() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <a
-                  href="mailto:hello@samueljbaker.dev"
+                  href="mailto:samuel.j.baker908@gmail.com?subject=Portfolio%20%E2%80%93%20Samuel%20J.%20Baker%20IV"
                   className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
                 >
                   <MailIcon className="h-4 w-4" />
                   <span>Email</span>
                 </a>
+
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText("samuel.j.baker908@gmail.com")}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
+                >
+                  <span>Copy email</span>
+                </button>
 
                 <a
                   href="https://www.linkedin.com/in/samuel-j-baker-iv/"
