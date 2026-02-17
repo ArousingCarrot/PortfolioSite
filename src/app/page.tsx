@@ -98,6 +98,27 @@ const SOCIALS: Social[] = [
 
 const PROJECTS: Project[] = [
   {
+  title: "Regime-Aware Volatility Forecasting (S&P 500) from EDGAR + Earnings Calls",
+  timeframe: "Feb 2026 to Present",
+  location: "Charlottesville, VA",
+  tags: ["Time Series", "NLP", "Temporal Fusion Transformer", "Regime Switching", "EDGAR", "Earnings Calls"],
+  highlights: [
+    "Forecasting next-day realized volatility (risk, not returns) from open-licensed daily S&P 500 OHLC history (1927–2020), using OHLC-derived targets and robust lagged baselines.",
+    "Ingesting and timestamp-aligning all major EDGAR filings (including 8-K for higher-frequency events) and earnings call transcripts; emphasizing domain-specific, context-aware sentiment/aspect signals over generic polarity.",
+    "Training a regime-aware Temporal Fusion Transformer-style forecaster (regime indicators / mixture-of-experts) and benchmarking against HAR-RV and price-only baselines, with attribution back to specific disclosures and event windows.",
+  ],
+  links: [
+    {
+      label: "Dataset (Kaggle)",
+      href: "https://www.kaggle.com/datasets/henryhan117/sp-500-historical-data",
+      external: true,
+    },
+    { label: "Public project brief coming soon", href: "#", muted: true },
+    { label: "Code repo (sanitized) coming soon", href: "#", muted: true },
+  ],
+  note: "Repo stays private until there is a proposal + baseline results (or an MVP).",
+},  
+  {
     title: "Entity Component System Game Engine",
     timeframe: "Jun 2025 to Present",
     location: "Charlottesville, VA",
