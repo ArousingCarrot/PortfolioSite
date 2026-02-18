@@ -123,13 +123,18 @@ const PROJECTS: Project[] = [
     timeframe: "Jun 2025 to Present",
     location: "Charlottesville, VA",
     tags: ["C++", "ECS", "Performance", "Tools", "OpenGL", "ImGui"],
-    highlights: [
-      "Built a C++ ECS engine with an editor-style UI, scene renderer, asset pipeline, and diagnostics.",
-      "Optimized ECS storage from hash maps to dense arrays: add/remove (100k entities) 99.8 ms to 11.8 ms, and system update 39.8 ms to 6.93 ms per frame.",
-      "Benchmarked hot paths: 100M sequential GetComponent lookups in 2.78 s (27.8 ns per access) and multi-million polygon scenes at interactive frame rates.",
-    ],
-    links: [{ label: "Repo coming soon", href: "#", muted: true }],
-    note: "Private repo right now. If you want to see code, reach out and I can share a build or walkthrough.",
+highlights: [
+  "Built a C++20 ECS game engine (SDL3 + OpenGL) with an ImGui editor, asset pipeline, and profiling/diagnostics (CPU scopes + GPU timers).",
+  "Implemented an experimental real-time GPU path tracer using OpenGL compute (progressive accumulation, tonemapping/debug views, optional A-Trous denoising), running 1–8 spp/frame at ~200–40 FPS on a 4070 Laptop-class GPU.",
+  "Performance engineering: redesigned component storage (hash maps -> dense arrays) cutting 100k entity add/remove 99.8 ms -> 11.8 ms and system update 39.8 ms -> 6.93 ms; measured 100M GetComponent lookups at 2.78 s (~27.8 ns/access) and interactive multi-million polygon scenes.",
+],
+    links: [{ 
+      label: "Github repo",
+      href: "https://github.com/ArousingCarrot/ECSGameEngine",
+      external: true,    
+    }
+  ],
+    note: "Public repo. WIP; happy to walk through architecture and performance optimizations in detail on request.",
   },
   {
     title: "Homelab and Local LLM Tooling",
@@ -445,12 +450,14 @@ export default function Page() {
             <div className="min-w-0">
               <h1 className="text-4xl md:text-6xl font-semibold leading-tight">Samuel J. Baker IV</h1>
 
-              <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">
-                I am a third-year CS student on the AI focal path at the University of Virginia, originally from Heathsville, Virginia.
-                I like building practical AI systems that feel usable, fast, and honest about constraints. That includes computer vision
-                pipelines, local LLM workflows, and agentic game systems. I also spend a lot of time in C++ optimizing hot paths and tooling,
-                because I'm obsessed with performance optimization.
-              </p>
+<p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">
+  I am a third-year Computer Science student at the University of Virginia on the AI track,
+  focused on building production-minded ML systems with measurable performance. My work spans
+  computer vision and applied ML, from data pipelines and model training to evaluation and
+  inference optimization. In parallel, I do performance engineering in C++: profiling hot
+  paths, improving memory/layout, and building tooling and diagnostics that keep systems fast
+  as they scale.
+</p>
 
               <p className="mt-4 text-base text-neutral-400 leading-relaxed">
                 Outside of code, I care about game design, weightlifting, film, music (guitar), and reading. If you want a quick snapshot
