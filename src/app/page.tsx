@@ -124,9 +124,9 @@ const PROJECTS: Project[] = [
     location: "Charlottesville, VA",
     tags: ["C++", "ECS", "Performance", "Tools", "OpenGL", "ImGui"],
 highlights: [
-  "Built a C++20 ECS game engine (SDL3 + OpenGL) with an ImGui editor, asset pipeline, and profiling/diagnostics (CPU scopes + GPU timers).",
-  "Implemented an experimental real-time GPU path tracer using OpenGL compute (progressive accumulation, tonemapping/debug views, optional A-Trous denoising), running 1–8 spp/frame at ~200–40 FPS on a 4070 Laptop-class GPU.",
-  "Performance engineering: redesigned component storage (hash maps -> dense arrays) cutting 100k entity add/remove 99.8 ms -> 11.8 ms and system update 39.8 ms -> 6.93 ms; measured 100M GetComponent lookups at 2.78 s (~27.8 ns/access) and interactive multi-million polygon scenes.",
+  "Developed a C++20 ECS game engine using SDL3 and OpenGL with an ImGui editor, asset pipeline and profiling tools.",
+  "Implemented a real-time GPU path tracer via OpenGL compute shaders (progressive accumulation and A-Trous denoising), achieving 200-40 FPS at 1-8 samples per pixel on an RTX 4070 laptop GPU.",
+  "Redesigned component storage from hash maps to dense arrays, reducing 100k entity add/remove operations from 99.8ms to 11.8ms (~88% reduction, 8.5x faster); and system-update time from 39.8ms to 6.93ms (~83% reduction, 5.7x faster); scaled to multi-million polygon scenes with ~27.8 ns component lookup."
 ],
     links: [{ 
       label: "Github repo",
@@ -137,13 +137,14 @@ highlights: [
     note: "Public repo. WIP; happy to walk through architecture and performance optimizations in detail on request.",
   },
   {
-    title: "Homelab and Local LLM Tooling",
-    timeframe: "Jun 2025",
+    title: "Self-Hosted AI Infrastructure Lab",
+    timeframe: "Jun 2025 to Present",
     location: "Charlottesville, VA",
     tags: ["Python", "Hugging Face", "Ollama", "Linux", "Systems"],
     highlights: [
-      "Repurposed a home server (Ryzen 7 3600X, GTX 1660S, 32 GB RAM) to host game servers and run local LLM workflows.",
-      "Built a custom UI for continual tokenization and model interaction to support local fine-tuning and iterative testing.",
+      "Built and operate a self-hosted homelab for local LLM inference and multiplayer game services, prioritizing privacy, transparency, and control over third-party cloud platforms.",
+      "Implemented secure remote access over SSH and designed architecture for decentralized self-hosted services, with expansion paths for mesh VPN and DNS-layer filtering.",
+      "Developed a custom UI for tokenization and model interaction to accelerate local inference, fine-tuning, and iterative model testing."
     ],
   },
   {
@@ -152,20 +153,21 @@ highlights: [
     location: "University of Virginia",
     tags: ["Computer Vision", "OpenCV", "Express.js", "Docker"],
     highlights: [
-      "Designed a low-cost computer vision workflow for McMaster slide egg counting to reduce time and cost of parasite monitoring.",
-      "Built a web prototype (HTML, CSS, JavaScript) with an Express.js server and an OpenCV feature-based detection pipeline.",
-      "Containerized the application with Docker and deployed it for end-to-end testing from upload to results.",
+      "Collaborated on a 5-member team to build a Dockerized full-stack parasite-screening app with HTML/CSS/JavaScript, Express.js, and Python/OpenCV, automating McMaster-slide analysis for sheep and goat samples.",
+      "Designed a feature-based CV pipeline using grayscale blur, thresholding, contour detection, and ellipse/shape-color matching to estimate eggs per gram under iPhone 6 and low-connectivity constraints, avoiding CNNs due to limited labeled data.",
+      "Improved threshold selection from a fixed value to modified Otsu with a translational shift, enabling correct health-condition classification on all test samples while reducing testing cost and turnaround versus the manual McMaster workflow."
     ],
     links: [{ label: "Read report (PDF)", href: "/papers/EggsByTheDozen.pdf" }],
   },
   {
-    title: "Agentic AI RPG Arbiter",
+    title: "Agentic RPG Arbiter",
     timeframe: "Aug 2025",
     location: "Charlottesville, VA",
     tags: ["LLM", "Agentic Systems", "Game Design", "State"],
     highlights: [
-      "Built a chat-driven dungeon arbiter that maps player dialogue to state flags and event triggers for branching encounters.",
-      "Implemented lightweight dialogue and state persistence to support deeper text-adventure interactions inside an RPG loop.",
+      "Built a chat-driven RPG arbiter that converts player dialogue into persistent state flags and event triggers, enabling branching narrative and adaptive encounters.",
+      "Added lightweight memory and session persistence to maintain narrative continuity across multi-turn interactions in a text-adventure game loop.",
+      "Prototyped agentic interaction patterns for games, focusing on stateful control flow and dialogue-to-action mapping."
     ],
     links: [{ label: "Write-up coming soon", href: "#", muted: true }],
   },
@@ -175,8 +177,8 @@ highlights: [
     location: "Chesapeake Bay Governor’s School Symposium",
     tags: ["Research", "Experiment Design", "Statistics"],
     highlights: [
-      "Ran a controlled inoculation study on soybeans (n=60, 6 groups, 2 trials) under 70%, 100%, and 130% water-holding capacity over 7 to 8 weeks.",
-      "Found significant differences in shoot dry mass and chlorophyll, and presented findings at the Chesapeake Bay Governor’s School symposium.",
+      "Ran controlled inoculation study on soybeans (n=60, 6 groups, 2 trials) under 70% / 100% / 130% water-holding capacity over 7-8 weeks.",
+      "Found significant differences in shoot dry mass (p=0.007-0.023) and chlorophyll (p=0.014-0.032); presented at Chesapeake Bay Governor’s School symposium (VCU)."
     ],
     links: [{ label: "Read paper (PDF)", href: "/papers/SeniorProject.pdf" }],
   },
