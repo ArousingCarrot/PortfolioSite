@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BackgroundCanvas } from "../components/background3d/BackgroundCanvas";
 import { BackgroundEffectsProvider } from "../components/background3d/BackgroundEffectsProvider";
+import { AnalyticsBeacon } from "../components/scripts/AnalyticsBeacon";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,6 +68,7 @@ const prepaintStyle: React.CSSProperties = {
   {children}
 </div>
         </BackgroundEffectsProvider>
+        <AnalyticsBeacon />
       </body>
     </html>
   );

@@ -3,21 +3,34 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "samueljbaker",
-	"main": ".open-next/worker.js",
-	"compatibility_date": "2025-03-01",
-	"compatibility_flags": [
-		"nodejs_compat",
-		"global_fetch_strictly_public"
-	],
-	"assets": {
-		"binding": "ASSETS",
-		"directory": ".open-next/assets"
-	},
-	"observability": {
-		"enabled": true
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "samueljbaker",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "ANALYTICS_DB",
+      "database_name": "samueljbaker-analytics",
+      "database_id": "9dcfeb0f-da41-40ac-aea4-b991323283ed"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "ANALYTICS_KV",
+      "id": "dc806ff898404552b4da8ac8603be06e"
+    }
+  ]
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
