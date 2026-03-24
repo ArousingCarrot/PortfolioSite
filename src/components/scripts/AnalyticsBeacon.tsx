@@ -217,28 +217,34 @@ export function AnalyticsBeacon() {
     document.addEventListener("click", handleClick);
 
     // ── session_end: pagehide fires reliably on tab close / navigation ────────
-    const handlePageHide = () => {
-      const duration_ms = Date.now() - startTimeRef.current;
+const handlePageHide = () => {
+  const ENDED_KEY = "sjb_ended";
+  try {
+    if (sessionStorage.getItem(ENDED_KEY) === sessionId) return;
+    sessionStorage.setItem(ENDED_KEY, sessionId);
+  } catch {}
+
+  const duration_ms = Date.now() - startTimeRef.current;
+  sendBeacon({
+    sessionId,
+    event: "session_end",
+    key,
+    payload: { duration_ms },
+  });
+
+  // Flush sections still in viewport
+  for (const [sectionId, entryTime] of sectionEntryTimes.current.entries()) {
+    const ms = Date.now() - entryTime;
+    if (ms >= MIN_DWELL_MS && !sectionDwellFired.current.has(sectionId)) {
       sendBeacon({
         sessionId,
-        event: "session_end",
+        event: "section_dwell",
         key,
-        payload: { duration_ms },
+        payload: { section: sectionId, ms },
       });
-
-      // Flush any sections still in viewport at page unload
-      for (const [sectionId, entryTime] of sectionEntryTimes.current.entries()) {
-        const ms = Date.now() - entryTime;
-        if (ms >= MIN_DWELL_MS && !sectionDwellFired.current.has(sectionId)) {
-          sendBeacon({
-            sessionId,
-            event: "section_dwell",
-            key,
-            payload: { section: sectionId, ms },
-          });
-        }
-      }
-    };
+    }
+  }
+};
 
     window.addEventListener("pagehide", handlePageHide);
 
