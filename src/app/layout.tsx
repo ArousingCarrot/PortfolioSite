@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import type { Viewport } from "next";
 import "./globals.css";
 import { BackgroundCanvas } from "../components/background3d/BackgroundCanvas";
 import { BackgroundEffectsProvider } from "../components/background3d/BackgroundEffectsProvider";
@@ -22,9 +23,11 @@ export const metadata: Metadata = {
   title: "Samuel J. Baker IV",
   description:
     "AI-focused CS student at the University of Virginia. Projects in computer vision, local LLM workflows, and performance-oriented systems.",
-  themeColor: BG,
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0a0a0d",
+};
 
 export default function RootLayout({
   children,

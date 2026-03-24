@@ -1,5 +1,6 @@
 import * as React from "react";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { DeleteKeyButton } from "@/components/admin/DeleteKeyButton";
 
 export const dynamic = "force-dynamic";
 
@@ -94,13 +95,35 @@ export default async function KeysPage() {
                     </span>
                   </td>
                   <td className="py-3">
-                    <form method="POST" action="/api/admin/keys" className="inline">
-                      <input type="hidden" name="key" value={k.key} />
-                      <input type="hidden" name="active" value={k.active ? "0" : "1"} />
-                      <button type="submit" className="text-xs text-neutral-500 hover:text-neutral-300 transition">
-                        {k.active ? "Deactivate" : "Activate"}
-                      </button>
-                    </form>
+                    <div className="flex items-center gap-4">
+                      <form method="POST" action="/api/admin/keys" className="inline">
+                        <input type="hidden" name="key" value={k.key} />
+                        <input type="hidden" name="active" value={k.active ? "0" : "1"} />
+                        <button type="submit" className="text-xs text-neutral-500 hover:text-neutral-300 transition">
+                          {k.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </form>
+
+                      {!k.sent_at && (
+                        <form method="POST" action="/api/admin/keys" className="inline">
+                          <input type="hidden" name="key" value={k.key} />
+                          <input type="hidden" name="mark_sent" value="1" />
+                          <button type="submit" className="text-xs text-yellow-300/60 hover:text-yellow-300 transition">
+                            Mark sent
+                          </button>
+                        </form>
+                      )}
+
+                      {k.sent_at && (
+                        <span className="text-xs text-neutral-600">
+                          Sent {k.sent_at.slice(0, 10)}
+                        </span>
+                      )}
+
+                      <span className="text-neutral-800">·</span>
+
+                      <DeleteKeyButton keyName={k.key} />
+                    </div>
                   </td>
                 </tr>
               ))}

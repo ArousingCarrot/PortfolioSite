@@ -10,7 +10,7 @@ interface CloudflareEnv {
 
 async function createKey(formData: FormData) {
   "use server";
-  const ctx = await getCloudflareContext();
+  const ctx = await getCloudflareContext({ async: true });
   const env = ctx.env as unknown as CloudflareEnv;
   const db = env.ANALYTICS_DB;
 
@@ -19,13 +19,16 @@ async function createKey(formData: FormData) {
   const company = formData.get("company")?.toString().trim() || null;
   const role = formData.get("role")?.toString().trim() || null;
   const channel = formData.get("channel")?.toString().trim() || null;
+  const markSent = formData.get("mark_sent") === "on";
 
   if (!key) return;
 
   const now = new Date().toISOString();
+  const sent_at = markSent ? now : null;
+
   await db
-    .prepare(`INSERT INTO referral_keys (key, label, company, role, channel, created_at, active) VALUES (?, ?, ?, ?, ?, ?, 1)`)
-    .bind(key, label, company, role, channel, now)
+    .prepare(`INSERT INTO referral_keys (key, label, company, role, channel, created_at, sent_at, active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`)
+    .bind(key, label, company, role, channel, now, sent_at)
     .run();
 
   redirect("/admin/keys");
@@ -60,6 +63,17 @@ export default function NewKeyPage() {
           <label className="block text-sm text-neutral-300 mb-1">Channel</label>
           <input name="channel" placeholder="e.g. linkedin, email, referral" className="w-full rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-yellow-300/40" />
         </div>
+        <div className="flex items-center gap-3">
+  <input
+    type="checkbox"
+    name="mark_sent"
+    id="mark_sent"
+    className="h-4 w-4 rounded border border-neutral-700 bg-neutral-900 accent-yellow-300"
+  />
+  <label htmlFor="mark_sent" className="text-sm text-neutral-300">
+    Mark as sent now — stamps sent_at with current time
+  </label>
+</div>
         <button type="submit" className="rounded-xl border border-yellow-300/40 bg-yellow-300/10 px-5 py-2 text-sm text-yellow-100 hover:bg-yellow-300/15 transition">
           Create key
         </button>

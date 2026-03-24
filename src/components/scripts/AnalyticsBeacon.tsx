@@ -120,8 +120,13 @@ export function AnalyticsBeacon() {
     keyRef.current = key;
     startTimeRef.current = Date.now();
 
-    // ── visit_confirmed: JS executed = human confirmed ────────────────────────
-    sendBeacon({ sessionId, event: "visit_confirmed", key });
+    // ── visit_confirmed: only once per session, not on every reload ───────────
+    const CONFIRMED_KEY = "sjb_confirmed";
+    const alreadyConfirmed = sessionStorage.getItem(CONFIRMED_KEY) === sessionId;
+    if (!alreadyConfirmed) {
+      sendBeacon({ sessionId, event: "visit_confirmed", key });
+      try { sessionStorage.setItem(CONFIRMED_KEY, sessionId); } catch {}
+    }
 
     // ── scroll_depth: fire once per checkpoint ────────────────────────────────
     const handleScroll = () => {
