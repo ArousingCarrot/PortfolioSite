@@ -2,6 +2,8 @@ import * as React from "react";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { redirect } from "next/navigation";
 
+const ctx = await getCloudflareContext({ async: true });
+
 interface CloudflareEnv {
   ANALYTICS_DB: D1Database;
 }

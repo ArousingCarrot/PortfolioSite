@@ -1,6 +1,8 @@
 import * as React from "react";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+export const dynamic = "force-dynamic";
+
 interface CloudflareEnv {
   ANALYTICS_DB: D1Database;
 }
@@ -22,7 +24,7 @@ export default async function KeysPage() {
   let dbError = false;
 
   try {
-    const ctx = await getCloudflareContext();
+    const ctx = await getCloudflareContext({ async: true });
     const env = ctx.env as unknown as CloudflareEnv;
     const db = env.ANALYTICS_DB;
 
